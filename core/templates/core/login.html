@@ -1,0 +1,36 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+
+<h1>Login</h1>
+
+<div class="card">
+
+    {% if error %}
+        <p>{{ error }}</p>
+    {% endif %}
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <p>
+            <label>Username</label><br>
+            <input type="text" name="username" required>
+        </p>
+
+        <p>
+            <label>Password</label><br>
+            <input type="password" name="password" required>
+        </p>
+
+        <button type="submit">Login</button>
+    </form>
+
+    <p>
+        Don't have an account?
+        <a href="{% url 'register' %}">Register</a>
+    </p>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "core/base.html" %}
+
+{% block title %}Create Project - LaunchPad{% endblock %}
+
+{% block content %}
+
+<h1>Create Project</h1>
+
+<div class="card">
+
+    <form method="POST" enctype="multipart/form-data">
+
+        {% csrf_token %}
+
+        {{ form.as_p }}
+
+        <button type="submit">
+            Create Project
+        </button>
+
+    </form>
+
+</div>
+
+{% endblock %}

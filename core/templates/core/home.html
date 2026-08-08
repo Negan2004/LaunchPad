@@ -1,0 +1,40 @@
+{% extends "core/base.html" %}
+
+{% block title %}LaunchPad - Home{% endblock %}
+
+{% block content %}
+
+<h1>LaunchPad</h1>
+
+<p>Discover and showcase student projects.</p>
+
+<h2>Latest Projects</h2>
+
+{% for project in projects %}
+
+<div class="card">
+
+    <h3>
+        <a href="{% url 'project_detail' project.pk %}">
+            {{ project.title }}
+        </a>
+    </h3>
+
+    <p>{{ project.description|truncatewords:30 }}</p>
+
+    <p>
+        Category:
+        {{ project.category }}
+    </p>
+
+</div>
+
+{% empty %}
+
+<div class="card">
+    <p>No published projects yet.</p>
+</div>
+
+{% endfor %}
+
+{% endblock %}
