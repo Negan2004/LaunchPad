@@ -4,7 +4,11 @@ from . import views
 
 
 urlpatterns = [
-    path("", views.home, name="home"),
+    path(
+        "",
+        views.home,
+        name="home",
+    ),
 
     path(
         "projects/",
@@ -37,6 +41,36 @@ urlpatterns = [
     ),
 
     path(
+        "projects/<int:pk>/like/",
+        views.toggle_like,
+        name="toggle_like",
+    ),
+
+    path(
+        "projects/<int:pk>/comment/",
+        views.add_comment,
+        name="add_comment",
+    ),
+
+    path(
+        "comments/<int:comment_id>/reply/",
+        views.add_reply,
+        name="add_reply",
+    ),
+
+    path(
+        "comments/<int:pk>/delete/",
+        views.delete_comment,
+        name="delete_comment",
+    ),
+
+    path(
+        "comments/<int:pk>/edit/",
+        views.edit_comment,
+        name="edit_comment",
+    ),
+
+    path(
         "profile/edit/",
         views.edit_profile,
         name="edit_profile",
@@ -59,29 +93,4 @@ urlpatterns = [
         views.logout_view,
         name="logout",
     ),
-
-    path(
-    "projects/<int:pk>/like/",
-    views.toggle_like,
-    name="toggle_like"
-),
-
-path(
-    "projects/<int:pk>/comment/",
-    views.add_comment,
-    name="add_comment",
-),
-
-path(
-    "comments/<int:pk>/delete/",
-    views.delete_comment,
-    name="delete_comment",
-),
-
-path(
-    "comments/<int:pk>/edit/",
-    views.edit_comment,
-    name="edit_comment",
-),
-
 ]

@@ -12,6 +12,8 @@ from .forms import (
 )
 
 from .models import Category, Project, Profile, Like, Comment
+
+
 def home(request):
     projects = Project.objects.filter(
         status="published",
@@ -56,7 +58,9 @@ def project_detail(request, pk):
     comments = Comment.objects.filter(
         project=project,
         parent__isnull=True
-    ).select_related("user").order_by("-created_at")
+    ).select_related("user").prefetch_related(
+        "replies__user"
+    ).order_by("-created_at")
 
     comment_form = CommentForm()
 
@@ -70,6 +74,7 @@ def project_detail(request, pk):
             "comment_form": comment_form,
         },
     )
+
 
 @login_required
 def add_comment(request, pk):
@@ -86,6 +91,30 @@ def add_comment(request, pk):
 
     return redirect("project_detail", pk=project.pk)
 
+
+@login_required
+def add_reply(request, comment_id):
+    parent_comment = get_object_or_404(
+        Comment,
+        pk=comment_id
+    )
+
+    if request.method == "POST":
+        form = CommentForm(request.POST)
+
+        if form.is_valid():
+            reply = form.save(commit=False)
+            reply.user = request.user
+            reply.project = parent_comment.project
+            reply.parent = parent_comment
+            reply.save()
+
+    return redirect(
+        "project_detail",
+        pk=parent_comment.project.pk
+    )
+
+
 @login_required
 def delete_comment(request, pk):
     comment = get_object_or_404(Comment, pk=pk)
@@ -95,15 +124,25 @@ def delete_comment(request, pk):
         request.user != comment.user
         and request.user != comment.project.owner
     ):
-        return redirect("project_detail", pk=comment.project.pk)
+        return redirect(
+            "project_detail",
+            pk=comment.project.pk
+        )
 
     if request.method == "POST":
         project_pk = comment.project.pk
         comment.delete()
 
-        return redirect("project_detail", pk=project_pk)
+        return redirect(
+            "project_detail",
+            pk=project_pk
+        )
 
-    return redirect("project_detail", pk=comment.project.pk)
+    return redirect(
+        "project_detail",
+        pk=comment.project.pk
+    )
+
 
 @login_required
 def edit_comment(request, pk):
@@ -121,6 +160,7 @@ def edit_comment(request, pk):
 
         if form.is_valid():
             form.save()
+
             return redirect(
                 "project_detail",
                 pk=comment.project.pk
@@ -136,6 +176,7 @@ def edit_comment(request, pk):
             "comment": comment,
         },
     )
+
 
 @login_required
 def toggle_like(request, pk):
@@ -154,23 +195,31 @@ def toggle_like(request, pk):
             project=project
         )
 
-    return redirect("project_detail", pk=project.pk)
+    return redirect(
+        "project_detail",
+        pk=project.pk
+    )
+
 
 @login_required
 def create_project(request):
     if request.method == "POST":
-        form = ProjectForm(request.POST, request.FILES)
+        form = ProjectForm(
+            request.POST,
+            request.FILES
+        )
 
         if form.is_valid():
             project = form.save(commit=False)
 
-            # Project model uses "owner", not "user"
             project.owner = request.user
 
             project.save()
 
-            return redirect("project_detail", pk=project.pk)
-
+            return redirect(
+                "project_detail",
+                pk=project.pk
+            )
     else:
         form = ProjectForm()
 
@@ -181,6 +230,7 @@ def create_project(request):
             "form": form,
         },
     )
+
 
 @login_required
 def edit_project(request, pk):
@@ -199,10 +249,15 @@ def edit_project(request, pk):
 
         if form.is_valid():
             form.save()
-            return redirect("project_detail", pk=project.pk)
 
+            return redirect(
+                "project_detail",
+                pk=project.pk
+            )
     else:
-        form = ProjectForm(instance=project)
+        form = ProjectForm(
+            instance=project
+        )
 
     return render(
         request,
@@ -225,6 +280,7 @@ def delete_project(request, pk):
 
     if request.method == "POST":
         project.delete()
+
         return redirect("project_list")
 
     return render(
@@ -238,7 +294,6 @@ def delete_project(request, pk):
 
 @login_required
 def edit_profile(request):
-    # Create the profile automatically if the user doesn't have one
     profile, created = Profile.objects.get_or_create(
         user=request.user
     )
@@ -252,10 +307,12 @@ def edit_profile(request):
 
         if form.is_valid():
             form.save()
-            return redirect("home")
 
+            return redirect("home")
     else:
-        form = ProfileForm(instance=profile)
+        form = ProfileForm(
+            instance=profile
+        )
 
     return render(
         request,
@@ -272,8 +329,8 @@ def register(request):
 
         if form.is_valid():
             form.save()
-            return redirect("login")
 
+            return redirect("login")
     else:
         form = RegisterForm()
 
@@ -302,6 +359,7 @@ def login_view(request):
 
         if user is not None:
             login(request, user)
+
             return redirect("home")
 
         return render(
@@ -312,9 +370,13 @@ def login_view(request):
             }
         )
 
-    return render(request, "core/login.html")
+    return render(
+        request,
+        "core/login.html"
+    )
 
 
 def logout_view(request):
     logout(request)
+
     return redirect("home")
