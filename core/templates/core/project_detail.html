@@ -4,55 +4,178 @@
 
 {% block content %}
 
-<div class="card">
+<h1>{{ project.title }}</h1>
 
-    <h1>{{ project.title }}</h1>
+<p>{{ project.description }}</p>
 
-    <p>{{ project.description }}</p>
 
-    <p>
-        <strong>Category:</strong>
-        {{ project.category }}
-    </p>
+<!-- ==================== LIKE SECTION ==================== -->
 
-    <p>
-        <strong>Status:</strong>
-        {{ project.status }}
-    </p>
+<p>
+    <strong>Likes:</strong> {{ project.likes.count }}
+</p>
 
-    <p>
-        <strong>Visibility:</strong>
-        {{ project.visibility }}
-    </p>
+{% if user.is_authenticated %}
 
-    {% if project.demo_url %}
-        <p>
-            <a class="btn" href="{{ project.demo_url }}" target="_blank">
-                Live Demo
-            </a>
-        </p>
+    {% if user_has_liked %}
+
+        <form method="post" action="{% url 'toggle_like' project.pk %}">
+            {% csrf_token %}
+
+            <button type="submit" class="like-btn liked">
+                ♥ <span>Liked</span>
+            </button>
+        </form>
+
+    {% else %}
+
+        <form method="post" action="{% url 'toggle_like' project.pk %}">
+            {% csrf_token %}
+
+            <button type="submit" class="like-btn">
+                ♡ <span>Like</span>
+            </button>
+        </form>
+
     {% endif %}
 
-    {% if project.repository_url %}
-        <p>
-            <a class="btn" href="{{ project.repository_url }}" target="_blank">
-                Source Code
-            </a>
-        </p>
-    {% endif %}
+{% else %}
 
-    {% if user == project.owner %}
-
-    <a href="{% url 'edit_project' project.pk %}">
-        Edit Project
-    </a>
-
-    <a href="{% url 'delete_project' project.pk %}">
-        Delete Project
-    </a>
+    <p>
+        <a href="{% url 'login' %}">Login</a>
+        to like this project.
+    </p>
 
 {% endif %}
 
-</div>
+
+<!-- ==================== PROJECT DETAILS ==================== -->
+
+<p>
+    <strong>Category:</strong>
+    {{ project.category }}
+</p>
+
+<p>
+    <strong>Status:</strong>
+    {{ project.status }}
+</p>
+
+<p>
+    <strong>Visibility:</strong>
+    {{ project.visibility }}
+</p>
+
+
+<!-- ==================== PROJECT LINKS ==================== -->
+
+{% if project.demo_url %}
+    <p>
+        <a class="btn" href="{{ project.demo_url }}" target="_blank">
+            Live Demo
+        </a>
+    </p>
+{% endif %}
+
+{% if project.repository_url %}
+    <p>
+        <a class="btn" href="{{ project.repository_url }}" target="_blank">
+            Source Code
+        </a>
+    </p>
+{% endif %}
+
+
+<!-- ==================== OWNER CONTROLS ==================== -->
+
+{% if user == project.owner %}
+
+    <p>
+        <a href="{% url 'edit_project' project.pk %}">
+            Edit Project
+        </a>
+
+        <a href="{% url 'delete_project' project.pk %}">
+            Delete Project
+        </a>
+    </p>
+
+{% endif %}
+
+
+<!-- ==================== COMMENTS ==================== -->
+
+<h2>Comments</h2>
+
+{% if user.is_authenticated %}
+
+    <form method="post" action="{% url 'add_comment' project.pk %}">
+        {% csrf_token %}
+
+        {{ comment_form.as_p }}
+
+        <button type="submit">
+            Add Comment
+        </button>
+    </form>
+
+{% else %}
+
+    <p>
+        <a href="{% url 'login' %}">Login</a>
+        to comment on this project.
+    </p>
+
+{% endif %}
+
+
+<!-- ==================== COMMENT LIST ==================== -->
+
+{% if comments %}
+
+    {% for comment in comments %}
+
+        <div class="card">
+
+            <strong>
+                {{ comment.user.username }}
+            </strong>
+
+            <small>
+                {{ comment.created_at|date:"M d, Y H:i" }}
+            </small>
+
+            <p>
+                {{ comment.content }}
+            </p>
+
+            {% if user == comment.user or user == project.owner %}
+    <form method="post" action="{% url 'delete_comment' comment.pk %}">
+        {% csrf_token %}
+        <button type="submit">Delete</button>
+    </form>
+{% endif %}
+
+{% if user == comment.user %}
+    <a
+        href="{% url 'edit_comment' comment.pk %}"
+        class="btn"
+    >
+        Edit
+    </a>
+{% endif %}
+
+        </div>
+
+    {% endfor %}
+
+{% else %}
+
+    <p>
+        No comments yet. Be the first to comment!
+    </p>
+
+{% endif %}
+
 
 {% endblock %}

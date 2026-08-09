@@ -1,0 +1,30 @@
+{% extends "core/base.html" %}
+
+{% block title %}Edit Comment - LaunchPad{% endblock %}
+
+{% block content %}
+
+<div class="card">
+
+    <h2>Edit Comment</h2>
+
+    <form method="post">
+        {% csrf_token %}
+
+        {{ form.as_p }}
+
+        <button type="submit">
+            Save Changes
+        </button>
+
+        <a
+            href="{% url 'project_detail' comment.project.pk %}"
+            class="btn"
+        >
+            Cancel
+        </a>
+    </form>
+
+</div>
+
+{% endblock %}

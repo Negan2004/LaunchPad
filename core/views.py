@@ -11,9 +11,7 @@ from .forms import (
     UserRegistrationForm,
 )
 
-from .models import Category, Project, Profile
-
-
+from .models import Category, Project, Profile, Like, Comment
 def home(request):
     projects = Project.objects.filter(
         status="published",
@@ -47,14 +45,116 @@ def project_list(request):
 def project_detail(request, pk):
     project = get_object_or_404(Project, pk=pk)
 
+    user_has_liked = False
+
+    if request.user.is_authenticated:
+        user_has_liked = Like.objects.filter(
+            user=request.user,
+            project=project
+        ).exists()
+
+    comments = Comment.objects.filter(
+        project=project,
+        parent__isnull=True
+    ).select_related("user").order_by("-created_at")
+
+    comment_form = CommentForm()
+
     return render(
         request,
         "core/project_detail.html",
         {
             "project": project,
+            "user_has_liked": user_has_liked,
+            "comments": comments,
+            "comment_form": comment_form,
         },
     )
 
+@login_required
+def add_comment(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+
+    if request.method == "POST":
+        form = CommentForm(request.POST)
+
+        if form.is_valid():
+            comment = form.save(commit=False)
+            comment.user = request.user
+            comment.project = project
+            comment.save()
+
+    return redirect("project_detail", pk=project.pk)
+
+@login_required
+def delete_comment(request, pk):
+    comment = get_object_or_404(Comment, pk=pk)
+
+    # Only the comment author OR project owner can delete
+    if (
+        request.user != comment.user
+        and request.user != comment.project.owner
+    ):
+        return redirect("project_detail", pk=comment.project.pk)
+
+    if request.method == "POST":
+        project_pk = comment.project.pk
+        comment.delete()
+
+        return redirect("project_detail", pk=project_pk)
+
+    return redirect("project_detail", pk=comment.project.pk)
+
+@login_required
+def edit_comment(request, pk):
+    comment = get_object_or_404(
+        Comment,
+        pk=pk,
+        user=request.user
+    )
+
+    if request.method == "POST":
+        form = CommentForm(
+            request.POST,
+            instance=comment
+        )
+
+        if form.is_valid():
+            form.save()
+            return redirect(
+                "project_detail",
+                pk=comment.project.pk
+            )
+    else:
+        form = CommentForm(instance=comment)
+
+    return render(
+        request,
+        "core/comment_edit.html",
+        {
+            "form": form,
+            "comment": comment,
+        },
+    )
+
+@login_required
+def toggle_like(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+
+    like = Like.objects.filter(
+        user=request.user,
+        project=project
+    ).first()
+
+    if like:
+        like.delete()
+    else:
+        Like.objects.create(
+            user=request.user,
+            project=project
+        )
+
+    return redirect("project_detail", pk=project.pk)
 
 @login_required
 def create_project(request):
