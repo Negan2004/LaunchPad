@@ -1,0 +1,25 @@
+{% extends "core/base.html" %}
+
+{% block title %}Create Collection - LaunchPad{% endblock %}
+
+{% block content %}
+
+<h1>Create Bookmark Collection</h1>
+
+<form method="post">
+
+    {% csrf_token %}
+
+    {{ form.as_p }}
+
+    <button type="submit">
+        Create Collection
+    </button>
+
+    <a href="{% url 'my_bookmarks' %}">
+        Cancel
+    </a>
+
+</form>
+
+{% endblock %}

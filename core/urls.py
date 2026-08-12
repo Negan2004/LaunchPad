@@ -47,6 +47,44 @@ urlpatterns = [
     ),
 
     path(
+    "projects/<int:pk>/bookmark/",
+    views.toggle_bookmark,
+    name="toggle_bookmark",
+),
+
+path(
+    "bookmarks/",
+    views.my_bookmarks,
+    name="my_bookmarks",
+),
+
+
+
+path(
+    "collections/create/",
+    views.create_collection,
+    name="create_collection",
+),
+
+path(
+    "collections/",
+    views.my_collections,
+    name="my_collections",
+),
+
+path(
+    "collections/<int:pk>/",
+    views.collection_detail,
+    name="collection_detail",
+),
+
+path(
+    "bookmarks/<int:pk>/add-to-collection/",
+    views.add_bookmark_to_collection,
+    name="add_bookmark_to_collection",
+),
+
+    path(
         "projects/<int:pk>/comment/",
         views.add_comment,
         name="add_comment",
@@ -93,4 +131,6 @@ urlpatterns = [
         views.logout_view,
         name="logout",
     ),
+
+
 ]

@@ -1,0 +1,33 @@
+{% extends "core/base.html" %}
+
+{% block title %}Add to Collection - LaunchPad{% endblock %}
+
+{% block content %}
+
+<h1>Add Bookmark to Collection</h1>
+
+<h2>
+    {{ bookmark.project.title }}
+</h2>
+
+<p>
+    Choose a collection for this bookmark:
+</p>
+
+<form method="post">
+ 
+    {% csrf_token %}
+
+    {{ form.as_p }}
+
+    <button type="submit">
+        Add to Collection
+    </button>
+
+    <a href="{% url 'project_detail' bookmark.project.pk %}">
+        Cancel
+    </a>
+
+</form>
+
+{% endblock %}

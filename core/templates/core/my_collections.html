@@ -1,0 +1,62 @@
+{% extends "core/base.html" %}
+
+{% block title %}My Collections - LaunchPad{% endblock %}
+
+{% block content %}
+
+<h1>My Collections</h1>
+
+<a href="{% url 'create_collection' %}">
+    Create Collection
+</a>
+
+{% if collections %}
+
+    {% for collection in collections %}
+
+        <div class="card">
+
+            <h2>
+                <a href="{% url 'collection_detail' collection.pk %}">
+                    {{ collection.name }}
+                </a>
+            </h2>
+
+            {% if collection.description %}
+                <p>
+                    {{ collection.description }}
+                </p>
+            {% endif %}
+
+            <p>
+                <strong>Bookmarks:</strong>
+                {{ collection.bookmarks.count }}
+            </p>
+
+            <a href="{% url 'collection_detail' collection.pk %}">
+                Open Collection
+            </a>
+
+        </div>
+
+    {% endfor %}
+
+{% else %}
+
+    <div class="card">
+
+        <h2>No collections yet</h2>
+
+        <p>
+            You haven't created any bookmark collections yet.
+        </p>
+
+        <a href="{% url 'create_collection' %}">
+            Create Your First Collection
+        </a>
+
+    </div>
+
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends "core/base.html" %}
+
+{% block title %}{{ collection.name }} - LaunchPad{% endblock %}
+
+{% block content %}
+
+<h1>{{ collection.name }}</h1>
+
+{% if collection.description %}
+    <p>{{ collection.description }}</p>
+{% endif %}
+
+<p>
+    <strong>Bookmarks:</strong>
+    {{ bookmarks|length }}
+</p>
+
+<a href="{% url 'my_collections' %}">
+    ← Back to My Collections
+</a>
+
+<hr>
+
+{% if bookmarks %}
+
+    {% for bookmark in bookmarks %}
+
+        <div class="card">
+
+            <h2>
+                <a href="{% url 'project_detail' bookmark.project.pk %}">
+                    {{ bookmark.project.title }}
+                </a>
+            </h2>
+
+            <p>
+                {{ bookmark.project.description }}
+            </p>
+
+            <a href="{% url 'project_detail' bookmark.project.pk %}">
+                View Project
+            </a>
+
+        </div>
+
+    {% endfor %}
+
+{% else %}
+
+    <div class="card">
+
+        <h2>No bookmarks in this collection</h2>
+
+        <p>
+            You haven't added any bookmarks to this collection yet.
+        </p>
+
+    </div>
+
+{% endif %}
+
+{% endblock %}

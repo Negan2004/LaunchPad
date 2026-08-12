@@ -51,6 +51,51 @@
 {% endif %}
 
 
+<!-- BOOKMARK -->
+
+<p>
+    <strong>Bookmarks:</strong> {{ project.bookmarks.count }}
+</p>
+
+{% if user.is_authenticated %}
+
+    {% if user_has_bookmarked %}
+
+        <form method="post"
+              action="{% url 'toggle_bookmark' project.pk %}">
+
+            {% csrf_token %}
+
+            <button type="submit" class="bookmark-btn bookmarked">
+                🔖 <span>Bookmarked</span>
+            </button>
+
+        </form>
+
+    {% else %}
+
+        <form method="post"
+              action="{% url 'toggle_bookmark' project.pk %}">
+
+            {% csrf_token %}
+
+            <button type="submit" class="bookmark-btn">
+                🔖 <span>Bookmark</span>
+            </button>
+
+        </form>
+
+    {% endif %}
+
+{% else %}
+
+    <p>
+        <a href="{% url 'login' %}">Login</a>
+        to bookmark this project.
+    </p>
+
+{% endif %}
+
 <!-- PROJECT LINKS -->
 
 {% if project.demo_url %}

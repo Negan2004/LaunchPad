@@ -9,9 +9,20 @@ from .forms import (
     ProfileForm,
     ProjectForm,
     UserRegistrationForm,
+    BookmarkCollectionForm,
+    AddBookmarkToCollectionForm,
+
 )
 
-from .models import Category, Project, Profile, Like, Comment
+from .models import (
+    Category,
+    Project,
+    Profile,
+    Like,
+    Comment,
+    Bookmark,
+    BookmarkCollection,
+)
 
 
 def home(request):
@@ -48,9 +59,15 @@ def project_detail(request, pk):
     project = get_object_or_404(Project, pk=pk)
 
     user_has_liked = False
+    user_has_bookmarked = False
 
     if request.user.is_authenticated:
         user_has_liked = Like.objects.filter(
+            user=request.user,
+            project=project
+        ).exists()
+
+        user_has_bookmarked = Bookmark.objects.filter(
             user=request.user,
             project=project
         ).exists()
@@ -70,6 +87,7 @@ def project_detail(request, pk):
         {
             "project": project,
             "user_has_liked": user_has_liked,
+            "user_has_bookmarked": user_has_bookmarked,
             "comments": comments,
             "comment_form": comment_form,
         },
@@ -200,6 +218,146 @@ def toggle_like(request, pk):
         pk=project.pk
     )
 
+@login_required
+def toggle_bookmark(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+
+    bookmark = Bookmark.objects.filter(
+        user=request.user,
+        project=project
+    ).first()
+
+    if bookmark:
+        bookmark.delete()
+    else:
+        Bookmark.objects.create(
+            user=request.user,
+            project=project
+        )
+
+    return redirect(
+        "project_detail",
+        pk=project.pk
+    )
+
+@login_required
+def my_bookmarks(request):
+    bookmarks = Bookmark.objects.filter(
+        user=request.user
+    ).select_related(
+        "project"
+    ).order_by(
+        "-created_at"
+    )
+
+    return render(
+        request,
+        "core/my_bookmarks.html",
+        {
+            "bookmarks": bookmarks,
+        },
+    )
+
+@login_required
+def create_collection(request):
+
+    if request.method == "POST":
+        form = BookmarkCollectionForm(request.POST)
+
+        if form.is_valid():
+            collection = form.save(commit=False)
+
+            collection.user = request.user
+
+            collection.save()
+
+            return redirect("my_bookmarks")
+
+    else:
+        form = BookmarkCollectionForm()
+
+    return render(
+        request,
+        "core/create_collection.html",
+        {
+            "form": form,
+        },
+    )
+
+@login_required
+def my_collections(request):
+    collections = BookmarkCollection.objects.filter(
+        user=request.user
+    ).order_by("-created_at")
+
+    return render(
+        request,
+        "core/my_collections.html",
+        {
+            "collections": collections,
+        },
+    )
+
+@login_required
+def collection_detail(request, pk):
+    collection = get_object_or_404(
+        BookmarkCollection,
+        pk=pk,
+        user=request.user
+    )
+
+    bookmarks = collection.bookmarks.select_related(
+        "project"
+    ).order_by(
+        "-created_at"
+    )
+
+    return render(
+        request,
+        "core/collection_detail.html",
+        {
+            "collection": collection,
+            "bookmarks": bookmarks,
+        },
+    )
+
+@login_required
+def add_bookmark_to_collection(request, pk):
+    bookmark = get_object_or_404(
+        Bookmark,
+        pk=pk,
+        user=request.user
+    )
+
+    if request.method == "POST":
+        form = AddBookmarkToCollectionForm(
+            request.POST,
+            instance=bookmark,
+            user=request.user
+        )
+
+        if form.is_valid():
+            form.save()
+
+            return redirect(
+                "collection_detail",
+                pk=bookmark.collection.pk
+            )
+
+    else:
+        form = AddBookmarkToCollectionForm(
+            instance=bookmark,
+            user=request.user
+        )
+
+    return render(
+        request,
+        "core/add_bookmark_to_collection.html",
+        {
+            "form": form,
+            "bookmark": bookmark,
+        },
+    )
 
 @login_required
 def create_project(request):

@@ -8,6 +8,7 @@ from .models import (
     Category,
     Comment,
     Bookmark,
+    BookmarkCollection,
 )
 
 
@@ -91,6 +92,33 @@ class BookmarkForm(forms.ModelForm):
     class Meta:
         model = Bookmark
         fields = []
+
+class BookmarkCollectionForm(forms.ModelForm):
+
+    class Meta:
+        model = BookmarkCollection
+        fields = [
+            "name",
+            "description",
+        ]
+
+class AddBookmarkToCollectionForm(forms.ModelForm):
+
+    class Meta:
+        model = Bookmark
+        fields = [
+            "collection",
+        ]
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+
+        super().__init__(*args, **kwargs)
+
+        if user:
+            self.fields["collection"].queryset = BookmarkCollection.objects.filter(
+                user=user
+            )
 
 class RegisterForm(UserCreationForm):
     email = forms.EmailField(required=True)
