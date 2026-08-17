@@ -114,6 +114,12 @@ path(
         name="edit_profile",
     ),
 
+path(
+    "profile/<str:username>/",
+    views.public_profile,
+    name="public_profile",
+),
+
     path(
         "register/",
         views.register,

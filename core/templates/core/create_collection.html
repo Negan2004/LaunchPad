@@ -1,25 +1,26 @@
 {% extends "core/base.html" %}
 
-{% block title %}Create Collection - LaunchPad{% endblock %}
+{% block title %}Create collection — LaunchPad{% endblock %}
 
 {% block content %}
 
-<h1>Create Bookmark Collection</h1>
+<header class="page-intro form-layout">
+    <div class="page-intro__copy">
+        <p class="eyebrow">Research map</p>
+        <h1>Start a useful collection.</h1>
+        <p class="lede">Name the theme, question, or direction that connects the projects you are saving.</p>
+    </div>
+</header>
 
-<form method="post">
-
-    {% csrf_token %}
-
-    {{ form.as_p }}
-
-    <button type="submit">
-        Create Collection
-    </button>
-
-    <a href="{% url 'my_bookmarks' %}">
-        Cancel
-    </a>
-
-</form>
+<section class="panel form-card form-layout">
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div class="button-row">
+            <button type="submit">Create collection</button>
+            <a class="button button--secondary" href="{% url 'my_collections' %}">Cancel</a>
+        </div>
+    </form>
+</section>
 
 {% endblock %}

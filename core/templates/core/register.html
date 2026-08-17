@@ -1,24 +1,26 @@
 {% extends "core/base.html" %}
 
-{% block title %}Register - LaunchPad{% endblock %}
+{% block title %}Join LaunchPad{% endblock %}
 
 {% block content %}
 
-<div class="card">
-    <h1>Create Account</h1>
+<section class="auth-page">
+    <div class="panel form-card auth-card">
+        <div class="auth-card__top">
+            <a class="auth-card__brand" href="{% url 'home' %}"><span aria-hidden="true">↗</span> LAUNCHPAD</a>
+            <p class="eyebrow">Create your space</p>
+            <h1>Start with the work.</h1>
+            <p class="lede">Build a focused public presence for the projects you want people to remember.</p>
+        </div>
 
-    <form method="POST">
-        {% csrf_token %}
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit">Create account</button>
+        </form>
 
-        {{ form.as_p }}
-
-        <button type="submit">Register</button>
-    </form>
-
-    <p style="margin-top: 15px;">
-        Already have an account?
-        <a href="{% url 'login' %}">Login</a>
-    </p>
-</div>
+        <p class="form-footer">Already building here? <a class="text-link" href="{% url 'login' %}">Log in</a>.</p>
+    </div>
+</section>
 
 {% endblock %}

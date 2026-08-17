@@ -5,6 +5,7 @@ from django.contrib.auth.forms import UserCreationForm
 from .models import (
     Profile,
     Project,
+    ProjectImage,
     Category,
     Comment,
     Bookmark,
@@ -43,6 +44,18 @@ class UserRegistrationForm(forms.ModelForm):
 
 class ProfileForm(forms.ModelForm):
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        for field_name in ("bio", "skills", "portfolio_url"):
+            value = self.initial.get(field_name)
+            if isinstance(value, str) and value.strip().lower() in {"null", "none"}:
+                self.initial[field_name] = ""
+
+        avatar = self.initial.get("avatar")
+        if avatar and not avatar.storage.exists(avatar.name):
+            self.initial["avatar"] = None
+
     class Meta:
         model = Profile
         fields = [
@@ -65,6 +78,15 @@ class ProjectForm(forms.ModelForm):
             "repository_url",
             "visibility",
             "status",
+        ]
+
+
+class ProjectImageForm(forms.ModelForm):
+
+    class Meta:
+        model = ProjectImage
+        fields = [
+            "image",
         ]
 
 

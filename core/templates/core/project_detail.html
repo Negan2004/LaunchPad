@@ -1,194 +1,141 @@
 {% extends "core/base.html" %}
 
-{% block title %}{{ project.title }} - LaunchPad{% endblock %}
+{% block title %}{{ project.title }} — LaunchPad{% endblock %}
 
 {% block content %}
 
-<h1>{{ project.title }}</h1>
+<section class="detail-hero">
+    <div class="detail-hero__main card">
+        <div class="detail-hero__meta">
+            <span class="badge badge--category">{{ project.category }}</span>
+            <span class="badge badge--{{ project.visibility }}">{{ project.get_visibility_display }}</span>
+            <span class="badge badge--{{ project.status }}">{{ project.get_status_display }}</span>
+        </div>
+        <h1>{{ project.title }}</h1>
+        <p class="owner-line">A project by <a href="{% url 'public_profile' project.owner.username %}">{{ project.owner.username }}</a> · created {{ project.created_at|date:"M d, Y" }}</p>
+        <div class="detail-description">{{ project.description }}</div>
+    </div>
 
-<p>
-    {{ project.description }}
-</p>
+    <aside class="detail-side">
+        <div class="engagement-card card">
+            <span class="engagement-number">{{ project.likes.count }}</span>
+            <div class="engagement-label">Signals of appreciation</div>
+            <div class="stacked-actions">
+                {% if user.is_authenticated %}
+                    <form method="post" action="{% url 'toggle_like' project.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="{% if user_has_liked %}button--secondary{% endif %}">{% if user_has_liked %}Unlike project{% else %}Appreciate project{% endif %}</button>
+                    </form>
+                    <form method="post" action="{% url 'toggle_bookmark' project.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="{% if user_has_bookmarked %}button--secondary{% endif %}">{% if user_has_bookmarked %}Remove from saved{% else %}Save for later{% endif %}</button>
+                    </form>
+                {% else %}
+                    <a class="button" href="{% url 'login' %}">Log in to engage</a>
+                {% endif %}
+            </div>
+        </div>
 
+        {% if project.demo_url or project.repository_url %}
+            <div class="engagement-card card">
+                <p class="eyebrow">Project links</p>
+                <div class="resource-links">
+                    {% if project.demo_url %}<a class="button button--secondary" href="{{ project.demo_url }}" target="_blank" rel="noopener">Open live demo ↗</a>{% endif %}
+                    {% if project.repository_url %}<a class="button button--secondary" href="{{ project.repository_url }}" target="_blank" rel="noopener">View source ↗</a>{% endif %}
+                </div>
+            </div>
+        {% endif %}
 
-<!-- LIKE -->
+        {% if user == project.owner %}
+            <div class="engagement-card card">
+                <p class="eyebrow">Owner controls</p>
+                <div class="resource-links">
+                    <a class="button button--secondary" href="{% url 'edit_project' project.pk %}">Edit project</a>
+                    <a class="button button--secondary" href="{% url 'delete_project' project.pk %}">Delete project</a>
+                </div>
+            </div>
+        {% endif %}
+    </aside>
+</section>
 
-<p>
-    <strong>Likes:</strong> {{ project.likes.count }}
-</p>
+{% with project_images=project.images.all %}
+    {% if project_images %}
+        <section aria-labelledby="project-gallery-heading">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Visual notes</p>
+                    <h2 id="project-gallery-heading">Project gallery</h2>
+                </div>
+            </div>
+            <div class="gallery">
+                {% for project_image in project_images %}
+                    {% if forloop.first %}
+                        <div>
+                            <div class="gallery__primary">
+                                <img src="{{ project_image.image.url }}" alt="{{ project_image.caption|default:project.title }}">
+                            </div>
+                            {% if project_image.caption %}<p class="gallery__caption">{{ project_image.caption }}</p>{% endif %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+                {% if project_images|length > 1 %}
+                    <div class="gallery__thumbs">
+                        {% for project_image in project_images %}
+                            {% if not forloop.first %}
+                                <div class="gallery__thumb">
+                                    <img src="{{ project_image.image.url }}" alt="{{ project_image.caption|default:project.title }}">
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+    {% endif %}
+{% endwith %}
 
-{% if user.is_authenticated %}
+<section class="comments-section" aria-labelledby="comments-heading">
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">Discussion</p>
+            <h2 id="comments-heading">Notes from the community</h2>
+        </div>
+    </div>
 
-    {% if user_has_liked %}
-
-        <form method="post" action="{% url 'toggle_like' project.pk %}">
-            {% csrf_token %}
-
-            <button type="submit" class="like-btn liked">
-                ♥ <span>Liked</span>
-            </button>
-        </form>
-
+    {% if user.is_authenticated %}
+        <div class="comment-compose card">
+            <form method="post" action="{% url 'add_comment' project.pk %}">
+                {% csrf_token %}
+                {{ comment_form.as_p }}
+                <button type="submit">Add a comment</button>
+            </form>
+        </div>
     {% else %}
-
-        <form method="post" action="{% url 'toggle_like' project.pk %}">
-            {% csrf_token %}
-
-            <button type="submit" class="like-btn">
-                ♡ <span>Like</span>
-            </button>
-        </form>
-
+        <div class="empty-state" style="min-height: 10rem;">
+            <div>
+                <div class="empty-state__icon" aria-hidden="true">◌</div>
+                <h2>Join the discussion</h2>
+                <p>Log in to leave thoughtful feedback on this project.</p>
+                <a class="button" href="{% url 'login' %}">Log in</a>
+            </div>
+        </div>
     {% endif %}
 
-{% else %}
-
-    <p>
-        <a href="{% url 'login' %}">Login</a>
-        to like this project.
-    </p>
-
-{% endif %}
-
-
-<!-- BOOKMARK -->
-
-<p>
-    <strong>Bookmarks:</strong> {{ project.bookmarks.count }}
-</p>
-
-{% if user.is_authenticated %}
-
-    {% if user_has_bookmarked %}
-
-        <form method="post"
-              action="{% url 'toggle_bookmark' project.pk %}">
-
-            {% csrf_token %}
-
-            <button type="submit" class="bookmark-btn bookmarked">
-                🔖 <span>Bookmarked</span>
-            </button>
-
-        </form>
-
+    {% if comments %}
+        <div class="comment-thread">
+            {% for comment in comments %}
+                {% include "core/comment.html" with comment=comment level=0 %}
+            {% endfor %}
+        </div>
     {% else %}
-
-        <form method="post"
-              action="{% url 'toggle_bookmark' project.pk %}">
-
-            {% csrf_token %}
-
-            <button type="submit" class="bookmark-btn">
-                🔖 <span>Bookmark</span>
-            </button>
-
-        </form>
-
+        <div class="empty-state" style="min-height: 12rem; margin-top: 1rem;">
+            <div>
+                <div class="empty-state__icon" aria-hidden="true">◌</div>
+                <h2>No discussion yet</h2>
+                <p>The first useful observation can help move a project forward.</p>
+            </div>
+        </div>
     {% endif %}
-
-{% else %}
-
-    <p>
-        <a href="{% url 'login' %}">Login</a>
-        to bookmark this project.
-    </p>
-
-{% endif %}
-
-<!-- PROJECT LINKS -->
-
-{% if project.demo_url %}
-
-    <p>
-        <a class="btn"
-           href="{{ project.demo_url }}"
-           target="_blank">
-            Live Demo
-        </a>
-    </p>
-
-{% endif %}
-
-
-{% if project.repository_url %}
-
-    <p>
-        <a class="btn"
-           href="{{ project.repository_url }}"
-           target="_blank">
-            Source Code
-        </a>
-    </p>
-
-{% endif %}
-
-
-<!-- PROJECT OWNER CONTROLS -->
-
-{% if user == project.owner %}
-
-    <p>
-        <a href="{% url 'edit_project' project.pk %}">
-            Edit Project
-        </a>
-
-        <a href="{% url 'delete_project' project.pk %}">
-            Delete Project
-        </a>
-    </p>
-
-{% endif %}
-
-
-<!-- COMMENTS -->
-
-<h2>Comments</h2>
-
-
-<!-- ADD COMMENT -->
-
-{% if user.is_authenticated %}
-
-    <form method="post"
-          action="{% url 'add_comment' project.pk %}">
-
-        {% csrf_token %}
-
-        {{ comment_form.as_p }}
-
-        <button type="submit">
-            Add Comment
-        </button>
-
-    </form>
-
-{% else %}
-
-    <p>
-        <a href="{% url 'login' %}">Login</a>
-        to comment on this project.
-    </p>
-
-{% endif %}
-
-
-<!-- COMMENT THREADS -->
-
-{% if comments %}
-
-    {% for comment in comments %}
-
-        {% include "core/comment.html" with comment=comment level=0 %}
-
-    {% endfor %}
-
-{% else %}
-
-    <p>
-        No comments yet. Be the first to comment!
-    </p>
-
-{% endif %}
+</section>
 
 {% endblock %}

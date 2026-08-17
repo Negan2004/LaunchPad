@@ -1,33 +1,26 @@
 {% extends "core/base.html" %}
 
-{% block title %}Add to Collection - LaunchPad{% endblock %}
+{% block title %}Organize saved work — LaunchPad{% endblock %}
 
 {% block content %}
 
-<h1>Add Bookmark to Collection</h1>
+<header class="page-intro form-layout">
+    <div class="page-intro__copy">
+        <p class="eyebrow">Research shelf</p>
+        <h1>Place this project with intent.</h1>
+        <p class="lede">Choose a private collection for <strong>{{ bookmark.project.title }}</strong>.</p>
+    </div>
+</header>
 
-<h2>
-    {{ bookmark.project.title }}
-</h2>
-
-<p>
-    Choose a collection for this bookmark:
-</p>
-
-<form method="post">
- 
-    {% csrf_token %}
-
-    {{ form.as_p }}
-
-    <button type="submit">
-        Add to Collection
-    </button>
-
-    <a href="{% url 'project_detail' bookmark.project.pk %}">
-        Cancel
-    </a>
-
-</form>
+<section class="panel form-card form-layout">
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div class="button-row">
+            <button type="submit">Add to collection</button>
+            <a class="button button--secondary" href="{% url 'project_detail' bookmark.project.pk %}">Cancel</a>
+        </div>
+    </form>
+</section>
 
 {% endblock %}

@@ -1,6 +1,7 @@
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
+from django.contrib.auth.models import User
 
 from .forms import (
     RegisterForm,
@@ -8,6 +9,7 @@ from .forms import (
     CommentForm,
     ProfileForm,
     ProjectForm,
+    ProjectImageForm,
     UserRegistrationForm,
     BookmarkCollectionForm,
     AddBookmarkToCollectionForm,
@@ -23,6 +25,13 @@ from .models import (
     Bookmark,
     BookmarkCollection,
 )
+
+
+def save_project_images(project, image_forms):
+    for image_form in image_forms:
+        project_image = image_form.save(commit=False)
+        project_image.project = project
+        project_image.save()
 
 
 def home(request):
@@ -366,13 +375,20 @@ def create_project(request):
             request.POST,
             request.FILES
         )
+        image_forms = [
+            ProjectImageForm(files={"image": image})
+            for image in request.FILES.getlist("images")
+        ]
 
-        if form.is_valid():
+        if form.is_valid() and all(
+            image_form.is_valid() for image_form in image_forms
+        ):
             project = form.save(commit=False)
 
             project.owner = request.user
 
             project.save()
+            save_project_images(project, image_forms)
 
             return redirect(
                 "project_detail",
@@ -380,12 +396,14 @@ def create_project(request):
             )
     else:
         form = ProjectForm()
+        image_forms = []
 
     return render(
         request,
         "core/project_form.html",
         {
             "form": form,
+            "image_forms": image_forms,
         },
     )
 
@@ -404,9 +422,16 @@ def edit_project(request, pk):
             request.FILES,
             instance=project
         )
+        image_forms = [
+            ProjectImageForm(files={"image": image})
+            for image in request.FILES.getlist("images")
+        ]
 
-        if form.is_valid():
+        if form.is_valid() and all(
+            image_form.is_valid() for image_form in image_forms
+        ):
             form.save()
+            save_project_images(project, image_forms)
 
             return redirect(
                 "project_detail",
@@ -416,6 +441,7 @@ def edit_project(request, pk):
         form = ProjectForm(
             instance=project
         )
+        image_forms = []
 
     return render(
         request,
@@ -424,6 +450,7 @@ def edit_project(request, pk):
             "form": form,
             "edit_mode": True,
             "project": project,
+            "image_forms": image_forms,
         },
     )
 
@@ -480,6 +507,34 @@ def edit_profile(request):
         },
     )
 
+
+def public_profile(request, username):
+    user = get_object_or_404(
+        User,
+        username=username
+    )
+
+    profile, created = Profile.objects.get_or_create(
+        user=user
+    )
+
+    projects = Project.objects.filter(
+        owner=user,
+        status="published",
+        visibility="public"
+    ).order_by(
+        "-created_at"
+    )
+
+    return render(
+        request,
+        "core/public_profile.html",
+        {
+            "profile_user": user,
+            "profile": profile,
+            "projects": projects,
+        },
+    )
 
 def register(request):
     if request.method == "POST":

@@ -1,25 +1,40 @@
 {% extends "core/base.html" %}
 
-{% block title %}Create Project - LaunchPad{% endblock %}
+{% block title %}{% if edit_mode %}Edit {{ project.title }}{% else %}New project{% endif %} — LaunchPad{% endblock %}
 
 {% block content %}
 
-<h1>Create Project</h1>
+<header class="page-intro form-layout">
+    <div class="page-intro__copy">
+        <p class="eyebrow">{% if edit_mode %}Project control{% else %}Project launch{% endif %}</p>
+        <h1>{% if edit_mode %}Refine {{ project.title }}.{% else %}Set your work in motion.{% endif %}</h1>
+        <p class="lede">{% if edit_mode %}Update the project brief or attach more images. Existing images remain in place.{% else %}Create a clear project brief, then add visuals that make the work tangible.{% endif %}</p>
+    </div>
+</header>
 
-<div class="card">
-
-    <form method="POST" enctype="multipart/form-data">
-
+<section class="panel form-card form-layout">
+    <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
-
         {{ form.as_p }}
 
-        <button type="submit">
-            Create Project
-        </button>
+        <div class="file-drop">
+            <label for="id_images">Project images</label>
+            <input type="file" name="images" id="id_images" accept="image/*" multiple>
+            <p class="field-help">Select one or more images. {% if edit_mode %}They will be added to the existing project gallery.{% else %}Images will be attached when this project is created.{% endif %}</p>
+            {% for image_form in image_forms %}
+                {{ image_form.image.errors }}
+            {% endfor %}
+        </div>
 
+        <div class="button-row">
+            <button type="submit">{% if edit_mode %}Save project changes{% else %}Create project{% endif %}</button>
+            {% if edit_mode %}
+                <a class="button button--secondary" href="{% url 'project_detail' project.pk %}">Cancel</a>
+            {% else %}
+                <a class="button button--secondary" href="{% url 'project_list' %}">Cancel</a>
+            {% endif %}
+        </div>
     </form>
-
-</div>
+</section>
 
 {% endblock %}

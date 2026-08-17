@@ -1,30 +1,21 @@
 {% extends "core/base.html" %}
 
+{% block title %}Delete {{ project.title }} — LaunchPad{% endblock %}
+
 {% block content %}
 
-<div class="card">
-
-    <h1>Delete Project</h1>
-
-    <p>
-        Are you sure you want to delete
-        <strong>{{ project.title }}</strong>?
-    </p>
-
-    <p>This action cannot be undone.</p>
-
-    <form method="POST">
+<section class="panel form-card danger-panel">
+    <p class="eyebrow">Project control</p>
+    <h1>Delete {{ project.title }}?</h1>
+    <p class="lede">This permanently removes the project and its associated project images.</p>
+    <p class="danger-panel__note">This action cannot be undone.</p>
+    <form method="post" style="margin-top: 1.4rem;">
         {% csrf_token %}
-
-        <button type="submit">
-            Yes, Delete Project
-        </button>
-
-        <a href="{% url 'project_detail' project.pk %}">
-            Cancel
-        </a>
+        <div class="button-row">
+            <button class="button--danger" type="submit">Yes, delete project</button>
+            <a class="button button--secondary" href="{% url 'project_detail' project.pk %}">Keep project</a>
+        </div>
     </form>
-
-</div>
+</section>
 
 {% endblock %}

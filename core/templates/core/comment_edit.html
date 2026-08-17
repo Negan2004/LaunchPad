@@ -1,30 +1,26 @@
 {% extends "core/base.html" %}
 
-{% block title %}Edit Comment - LaunchPad{% endblock %}
+{% block title %}Edit comment — LaunchPad{% endblock %}
 
 {% block content %}
 
-<div class="card">
+<header class="page-intro form-layout">
+    <div class="page-intro__copy">
+        <p class="eyebrow">Discussion</p>
+        <h1>Refine your note.</h1>
+        <p class="lede">Update your comment on <strong>{{ comment.project.title }}</strong>.</p>
+    </div>
+</header>
 
-    <h2>Edit Comment</h2>
-
+<section class="panel form-card form-layout">
     <form method="post">
         {% csrf_token %}
-
         {{ form.as_p }}
-
-        <button type="submit">
-            Save Changes
-        </button>
-
-        <a
-            href="{% url 'project_detail' comment.project.pk %}"
-            class="btn"
-        >
-            Cancel
-        </a>
+        <div class="button-row">
+            <button type="submit">Save changes</button>
+            <a class="button button--secondary" href="{% url 'project_detail' comment.project.pk %}">Cancel</a>
+        </div>
     </form>
-
-</div>
+</section>
 
 {% endblock %}

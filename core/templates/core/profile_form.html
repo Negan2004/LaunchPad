@@ -1,19 +1,98 @@
 {% extends "core/base.html" %}
+{% load profile_extras %}
+
+{% block title %}Profile Studio — LaunchPad{% endblock %}
 
 {% block content %}
 
-<h1>Edit Profile</h1>
+<header class="page-intro profile-studio-intro">
+    <div class="page-intro__copy">
+        <p class="eyebrow">Profile studio</p>
+        <h1>Shape your developer presence.</h1>
+        <p class="lede">Add the essentials people need to understand your work and where to find it.</p>
+    </div>
+</header>
 
-<form method="POST" enctype="multipart/form-data">
+<section class="profile-studio-layout">
+    <aside class="profile-preview-card">
+        <p class="eyebrow">Profile preview</p>
+        <div class="profile-preview-card__avatar">
+            {% if form.instance.avatar|stored_file_exists %}
+                <img src="{{ form.instance.avatar.url }}" alt="{{ user.username }}'s current avatar">
+            {% else %}
+                {{ user.username|first|upper }}
+            {% endif %}
+        </div>
+        <h2>{{ user.username }}</h2>
+        {% if form.instance.bio|has_profile_text %}
+            <p>{{ form.instance.bio|clean_profile_text }}</p>
+        {% else %}
+            <p class="muted">Your public bio will appear here.</p>
+        {% endif %}
+        {% if form.instance.skills|has_profile_text %}
+            <span class="profile-preview-card__skills">{{ form.instance.skills|clean_profile_text }}</span>
+        {% endif %}
+        <a class="text-link" href="{% url 'public_profile' user.username %}">View public profile →</a>
+    </aside>
 
-    {% csrf_token %}
+    <form class="panel form-card profile-studio-form" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
 
-    {{ form.as_p }}
+        <section class="studio-section">
+            <div class="studio-section__heading">
+                <p class="eyebrow">Identity image</p>
+                <h2>Avatar</h2>
+                <p>Use a clear image that feels right for your public developer space.</p>
+            </div>
+            <div class="avatar-field">
+                <label for="{{ form.avatar.id_for_label }}">Upload or change avatar</label>
+                {{ form.avatar }}
+                {{ form.avatar.errors }}
+            </div>
+        </section>
 
-    <button type="submit">
-        Save Profile
-    </button>
+        <section class="studio-section">
+            <div class="studio-section__heading">
+                <p class="eyebrow">Identity</p>
+                <h2>Your public introduction</h2>
+                <p>Your username is <strong>{{ user.username }}</strong>. Add context to the work you share.</p>
+            </div>
+            <div class="field-grid">
+                <div class="field-grid__full">
+                    <label for="{{ form.bio.id_for_label }}">Bio</label>
+                    {{ form.bio }}
+                    {{ form.bio.errors }}
+                </div>
+            </div>
+        </section>
 
-</form>
+        <section class="studio-section">
+            <div class="studio-section__heading">
+                <p class="eyebrow">Technical strengths</p>
+                <h2>Skills</h2>
+                <p>Describe the tools, disciplines, or areas you are developing.</p>
+            </div>
+            <label for="{{ form.skills.id_for_label }}">Skills</label>
+            {{ form.skills }}
+            {{ form.skills.errors }}
+        </section>
+
+        <section class="studio-section">
+            <div class="studio-section__heading">
+                <p class="eyebrow">Portfolio</p>
+                <h2>Where else to find you</h2>
+                <p>Link to a portfolio or personal site when you are ready.</p>
+            </div>
+            <label for="{{ form.portfolio_url.id_for_label }}">Portfolio URL</label>
+            {{ form.portfolio_url }}
+            {{ form.portfolio_url.errors }}
+        </section>
+
+        <div class="profile-studio-form__actions">
+            <button type="submit">Save profile changes</button>
+            <a class="button button--secondary" href="{% url 'public_profile' user.username %}">View public profile</a>
+        </div>
+    </form>
+</section>
 
 {% endblock %}

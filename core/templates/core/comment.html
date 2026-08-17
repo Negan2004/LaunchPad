@@ -1,85 +1,39 @@
-<div class="card" style="margin-left: {{ level|default:0 }}px;">
+<article class="comment-card card">
+    <div class="comment-card__top">
+        <span class="comment-author">{{ comment.user.username }}</span>
+        <time class="comment-time" datetime="{{ comment.created_at|date:'c' }}">{{ comment.created_at|date:"M d, Y · H:i" }}</time>
+    </div>
+    <div class="comment-body">{{ comment.content }}</div>
 
-    <strong>
-        {{ comment.user.username }}
-    </strong>
+    <div class="comment-actions">
+        {% if user == comment.user %}
+            <a class="button button--quiet" href="{% url 'edit_comment' comment.pk %}">Edit</a>
+        {% endif %}
 
-    <small>
-        {{ comment.created_at|date:"M d, Y H:i" }}
-    </small>
-
-    <p>
-        {{ comment.content }}
-    </p>
-
-
-    <!-- EDIT COMMENT -->
-
-    {% if user == comment.user %}
-
-        <a href="{% url 'edit_comment' comment.pk %}">
-            Edit
-        </a>
-
-    {% endif %}
-
-
-    <!-- DELETE COMMENT -->
-
-    {% if user == comment.user or user == project.owner %}
-
-        <form method="post"
-              action="{% url 'delete_comment' comment.pk %}"
-              style="display:inline;">
-
-            {% csrf_token %}
-
-            <button type="submit">
-                Delete
-            </button>
-
-        </form>
-
-    {% endif %}
-
-
-    <!-- REPLY -->
+        {% if user == comment.user or user == project.owner %}
+            <form method="post" action="{% url 'delete_comment' comment.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="button button--quiet">Delete</button>
+            </form>
+        {% endif %}
+    </div>
 
     {% if user.is_authenticated %}
-
-        <form method="post"
-              action="{% url 'add_reply' comment.pk %}">
-
+        <form class="reply-form" method="post" action="{% url 'add_reply' comment.pk %}">
             {% csrf_token %}
-
-            <textarea
-                name="content"
-                rows="2"
-                placeholder="Reply to {{ comment.user.username }}..."
-                required></textarea>
-
-            <button type="submit">
-                Reply
-            </button>
-
+            <label class="visually-hidden" for="reply-{{ comment.pk }}">Reply to {{ comment.user.username }}</label>
+            <textarea id="reply-{{ comment.pk }}" name="content" rows="2" placeholder="Reply to {{ comment.user.username }}..." required></textarea>
+            <button type="submit" class="button button--secondary">Reply</button>
         </form>
-
     {% else %}
-
-        <p>
-            <a href="{% url 'login' %}">Login</a>
-            to reply.
-        </p>
-
+        <p class="field-help"><a href="{% url 'login' %}">Log in</a> to reply.</p>
     {% endif %}
 
-
-    <!-- NESTED REPLIES -->
-
-    {% for reply in comment.replies.all %}
-
-        {% include "core/comment.html" with comment=reply level=level|add:"40" %}
-
-    {% endfor %}
-
-</div>
+    {% if comment.replies.all %}
+        <div class="comment-replies">
+            {% for reply in comment.replies.all %}
+                {% include "core/comment.html" with comment=reply level=level|add:"40" %}
+            {% endfor %}
+        </div>
+    {% endif %}
+</article>

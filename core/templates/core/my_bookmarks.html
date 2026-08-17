@@ -1,69 +1,53 @@
 {% extends "core/base.html" %}
 
-{% block title %}My Bookmarks - LaunchPad{% endblock %}
+{% block title %}Saved work — LaunchPad{% endblock %}
 
 {% block content %}
 
-<h1>My Bookmarks</h1>
+<header class="page-intro">
+    <div class="page-intro__copy">
+        <p class="eyebrow">Research shelf</p>
+        <h1>Saved work, ready when you are.</h1>
+        <p class="lede">Keep promising projects close, then organize them into collections when an idea starts to take shape.</p>
+    </div>
+    <a class="button button--secondary" href="{% url 'my_collections' %}">View collections</a>
+</header>
 
 {% if bookmarks %}
-
-    {% for bookmark in bookmarks %}
-
-        <div class="card">
-
-            <h2>
-                <a href="{% url 'project_detail' bookmark.project.pk %}">
-                    {{ bookmark.project.title }}
-                </a>
-            </h2>
-
-            <p>
-                {{ bookmark.project.description }}
-            </p>
-
-            <p>
-                <strong>Category:</strong>
-                {{ bookmark.project.category }}
-            </p>
-
-            <p>
-                <strong>Status:</strong>
-                {{ bookmark.project.status }}
-            </p>
-
-            <a
-                class="btn"
-                href="{% url 'project_detail' bookmark.project.pk %}"
-            >
-                View Project
-            </a>
-<a href="{% url 'add_bookmark_to_collection' bookmark.pk %}">
-    Add to Collection
-</a>
-        </div>
-
-    {% endfor %}
-
-{% else %}
-
-    <div class="card">
-
-        <h2>No bookmarks yet</h2>
-
-        <p>
-            You haven't bookmarked any projects yet.
-        </p>
-
-        <a
-            class="btn"
-            href="{% url 'project_list' %}"
-        >
-            Explore Projects
-        </a>
-
+    <div class="bookmark-list">
+        {% for bookmark in bookmarks %}
+            <article class="bookmark-row card">
+                {% with primary_image=bookmark.project.images.first %}
+                    <a class="bookmark-row__image" href="{% url 'project_detail' bookmark.project.pk %}">
+                        {% if primary_image %}
+                            <img src="{{ primary_image.image.url }}" alt="{{ primary_image.caption|default:bookmark.project.title }}">
+                        {% else %}
+                            <span class="bookmark-row__placeholder">Saved project</span>
+                        {% endif %}
+                    </a>
+                {% endwith %}
+                <div class="bookmark-row__copy">
+                    <div class="project-card__meta"><span class="badge badge--category">{{ bookmark.project.category }}</span><span class="badge badge--{{ bookmark.project.status }}">{{ bookmark.project.get_status_display }}</span></div>
+                    <h2><a href="{% url 'project_detail' bookmark.project.pk %}">{{ bookmark.project.title }}</a></h2>
+                    <p>{{ bookmark.project.description|truncatewords:28 }}</p>
+                    {% if bookmark.collection %}<span class="badge badge--saved">In {{ bookmark.collection.name }}</span>{% endif %}
+                </div>
+                <div class="bookmark-row__actions">
+                    <a class="button button--secondary" href="{% url 'project_detail' bookmark.project.pk %}">Open</a>
+                    <a class="button" href="{% url 'add_bookmark_to_collection' bookmark.pk %}">Organize</a>
+                </div>
+            </article>
+        {% endfor %}
     </div>
-
+{% else %}
+    <div class="empty-state">
+        <div>
+            <div class="empty-state__icon" aria-hidden="true">⌁</div>
+            <h2>Your research shelf is empty</h2>
+            <p>Save projects that spark a question, an idea, or the next thing you want to build.</p>
+            <a class="button" href="{% url 'project_list' %}">Explore projects</a>
+        </div>
+    </div>
 {% endif %}
 
 {% endblock %}
