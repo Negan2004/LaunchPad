@@ -1,0 +1,3 @@
+{% extends "core/base.html" %}
+{% block title %}Report {{ project.title }} — LaunchPad{% endblock %}
+{% block content %}<header class="page-intro"><div class="page-intro__copy"><p class="eyebrow">Community safety</p><h1>Report a project.</h1><p class="lede">Help keep LaunchPad useful, respectful, and focused on real student work.</p></div></header><form class="panel form-card form-layout" method="post">{% csrf_token %}{{ form.as_p }}<button type="submit" class="button--danger">Submit report</button><a class="button button--secondary" href="{% url 'project_detail' project.pk %}">Cancel</a></form>{% endblock %}

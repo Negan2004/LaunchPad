@@ -16,10 +16,18 @@ class Profile(models.Model):
         on_delete=models.CASCADE,
         related_name='profile'
     )
+    display_name = models.CharField(max_length=150, blank=True)
     bio = models.TextField(blank=True)
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
+    cover_image = models.ImageField(upload_to='covers/', blank=True, null=True)
+    college = models.CharField(max_length=200, blank=True)
+    education = models.CharField(max_length=200, blank=True)
     skills = models.TextField(blank=True)
     portfolio_url = models.URLField(blank=True)
+    github_url = models.URLField(blank=True)
+    linkedin_url = models.URLField(blank=True)
+    twitter_url = models.URLField(blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -48,9 +56,15 @@ class Project(models.Model):
         related_name='projects'
     )
     title = models.CharField(max_length=200)
+    short_description = models.CharField(max_length=280, blank=True)
     description = models.TextField()
+    technologies = models.TextField(blank=True)
+    tags = models.CharField(max_length=500, blank=True)
     demo_url = models.URLField(blank=True)
     repository_url = models.URLField(blank=True)
+    documentation_url = models.URLField(blank=True)
+    documentation_file = models.FileField(upload_to='documentation/', blank=True, null=True)
+
     visibility = models.CharField(
         max_length=10,
         choices=VISIBILITY_CHOICES,
@@ -61,7 +75,21 @@ class Project(models.Model):
         choices=STATUS_CHOICES,
         default='draft'
     )
+    STAGE_CHOICES = [
+        ('prototype', 'Prototype'),
+        ('ongoing', 'Ongoing'),
+        ('completed', 'Completed'),
+    ]
+    stage = models.CharField(
+        max_length=12,
+        choices=STAGE_CHOICES,
+        default='prototype'
+    )
+    views_count = models.PositiveIntegerField(default=0)
+    featured = models.BooleanField(default=False)
+    featured_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
@@ -458,3 +486,135 @@ class Leaderboard(models.Model):
 
     def __str__(self):
         return f"{self.period} - {self.user.username} - Rank {self.rank}"
+
+
+class ProjectView(models.Model):
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        related_name="view_events",
+    )
+    visitor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="project_views",
+    )
+    session_key = models.CharField(max_length=40, blank=True)
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"View: {self.project.title}"
+
+
+class ProfileVisit(models.Model):
+    profile_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="profile_visits",
+    )
+    visitor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="profile_views_made",
+    )
+    session_key = models.CharField(max_length=40, blank=True)
+    visited_at = models.DateTimeField(auto_now_add=True)
+
+
+class ActivityEvent(models.Model):
+    EVENT_CHOICES = [
+        ("project_published", "Project published"),
+        ("like_received", "Like received"),
+        ("comment_received", "Comment received"),
+        ("follow_received", "Follow received"),
+        ("contest_winner", "Contest winner"),
+        ("featured_project", "Featured project"),
+        ("badge_awarded", "Badge awarded"),
+    ]
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="activity_events",
+    )
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="activity_events_triggered",
+    )
+    event_type = models.CharField(max_length=40, choices=EVENT_CHOICES)
+    points = models.PositiveIntegerField(default=0)
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="activity_events",
+    )
+    contest = models.ForeignKey(
+        Contest,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="activity_events",
+    )
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
+class Report(models.Model):
+    STATUS_CHOICES = [
+        ("open", "Open"),
+        ("reviewing", "Reviewing"),
+        ("resolved", "Resolved"),
+        ("dismissed", "Dismissed"),
+    ]
+    reporter = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="reports_made",
+    )
+    reported_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reports_received",
+    )
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reports",
+    )
+    comment = models.ForeignKey(
+        Comment,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reports",
+    )
+    reason = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="open")
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    resolved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reports_resolved",
+    )
+
+    class Meta:
+        ordering = ["-created_at"]

@@ -1,0 +1,6 @@
+{% extends "core/base.html" %}
+{% block title %}Contests — LaunchPad{% endblock %}
+{% block content %}
+<header class="page-intro"><div class="page-intro__copy"><p class="eyebrow">Innovation arena</p><h1>Contests that move ideas forward.</h1><p class="lede">Join a challenge, submit your best work, and earn recognition that stays with your profile.</p></div>{% if user.is_staff %}<a class="button" href="{% url 'create_contest' %}">Create contest</a>{% endif %}</header>
+<div class="contest-grid">{% for contest in contests %}<article class="panel contest-card"><div class="project-card__meta"><span class="badge badge--{{ contest.status }}">{{ contest.get_status_display }}</span><span class="muted">{{ contest.participants.count }} participants</span></div><h2>{{ contest.title }}</h2><p>{{ contest.description|truncatewords:35 }}</p><div class="contest-card__dates"><span>Register by {{ contest.registration_deadline|date:"M j, Y" }}</span><span>Submit by {{ contest.submission_deadline|date:"M j, Y" }}</span></div><a class="text-link" href="{% url 'contest_detail' contest.pk %}">View contest →</a></article>{% empty %}<div class="empty-state"><div><h2>No contests published yet</h2><p>New innovation challenges will appear here.</p></div></div>{% endfor %}</div>
+{% endblock %}

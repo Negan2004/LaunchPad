@@ -1,0 +1,3 @@
+{% extends "core/base.html" %}
+{% block title %}{% if edit_mode %}Edit contest{% else %}Create contest{% endif %} — LaunchPad{% endblock %}
+{% block content %}<header class="page-intro"><div class="page-intro__copy"><p class="eyebrow">Staff workspace</p><h1>{% if edit_mode %}Refine the challenge.{% else %}Create a new challenge.{% endif %}</h1><p class="lede">Give students a clear brief, fair rules, and enough time to do meaningful work.</p></div></header><form class="panel form-card form-layout" method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Save contest</button></form>{% endblock %}

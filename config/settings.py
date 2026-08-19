@@ -64,7 +64,9 @@ TEMPLATES = [
             'context_processors': [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+                                'django.contrib.messages.context_processors.messages',
+                'core.context_processors.launchpad_context',
+
             ],
         },
     },
@@ -79,7 +81,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'launchpad_db',
+        'NAME': 'launchpad_final_test',
         'USER': 'postgres',
         'PASSWORD': 'Launch_Pad',
         'HOST': 'localhost',
@@ -131,8 +133,5 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
-}
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'noreply@launchpad.local'

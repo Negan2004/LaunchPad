@@ -1,0 +1,14 @@
+{% extends "core/base.html" %}
+
+{% block title %}{{ list_title }} — {{ profile_user.username }} — LaunchPad{% endblock %}
+
+{% block content %}
+<header class="page-intro"><div class="page-intro__copy"><p class="eyebrow">{{ profile_user.username }}'s network</p><h1>{{ list_title }}.</h1><p class="lede">People connected to {{ profile_user.username }} on LaunchPad.</p></div><a class="button button--secondary" href="{% url 'public_profile' profile_user.username %}">Back to profile</a></header>
+{% if people %}
+<div class="people-grid">
+    {% for person in people %}
+    <article class="panel person-card"><div class="person-card__avatar">{{ person.username|first|upper }}</div><div><h2>{% if person.profile.display_name %}{{ person.profile.display_name }}{% else %}{{ person.username }}{% endif %}</h2><p class="muted">@{{ person.username }}</p>{% if person.profile.college %}<p class="muted">{{ person.profile.college }}</p>{% endif %}<a class="text-link" href="{% url 'public_profile' person.username %}">View profile →</a></div></article>
+    {% endfor %}
+</div>
+{% else %}<div class="empty-state"><div><div class="empty-state__icon" aria-hidden="true">⌁</div><h2>No {{ list_title|lower }} yet</h2><p>When people connect with {{ profile_user.username }}, they will appear here.</p></div></div>{% endif %}
+{% endblock %}

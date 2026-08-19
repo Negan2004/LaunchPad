@@ -10,6 +10,9 @@ from .models import (
     Comment,
     Bookmark,
     BookmarkCollection,
+    Contest,
+    ContestSubmission,
+    Report,
 )
 
 
@@ -47,7 +50,7 @@ class ProfileForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        for field_name in ("bio", "skills", "portfolio_url"):
+        for field_name in ("display_name", "bio", "college", "education", "skills", "portfolio_url", "github_url", "linkedin_url", "twitter_url"):
             value = self.initial.get(field_name)
             if isinstance(value, str) and value.strip().lower() in {"null", "none"}:
                 self.initial[field_name] = ""
@@ -59,26 +62,53 @@ class ProfileForm(forms.ModelForm):
     class Meta:
         model = Profile
         fields = [
+            "display_name",
             "bio",
             "avatar",
+            "cover_image",
+            "college",
+            "education",
             "skills",
             "portfolio_url",
+            "github_url",
+            "linkedin_url",
+            "twitter_url",
+
         ]
 
 
 class ProjectForm(forms.ModelForm):
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["stage"].required = False
+        if not self.initial.get("stage"):
+            self.initial["stage"] = "prototype"
+
     class Meta:
+
         model = Project
         fields = [
             "title",
+            "short_description",
             "description",
             "category",
+            "technologies",
+            "tags",
             "demo_url",
             "repository_url",
+            "documentation_url",
+            "documentation_file",
             "visibility",
             "status",
+            "stage",
         ]
+        widgets = {
+            "short_description": forms.TextInput(attrs={"maxlength": 280}),
+            "description": forms.Textarea(attrs={"rows": 8}),
+            "technologies": forms.Textarea(attrs={"rows": 3, "placeholder": "Python, Django, PostgreSQL"}),
+            "tags": forms.TextInput(attrs={"placeholder": "AI, education, web"}),
+        }
 
 
 class ProjectImageForm(forms.ModelForm):
@@ -142,7 +172,50 @@ class AddBookmarkToCollectionForm(forms.ModelForm):
                 user=user
             )
 
+class ContestForm(forms.ModelForm):
+    class Meta:
+        model = Contest
+        fields = [
+            "title",
+            "description",
+            "rules",
+            "registration_deadline",
+            "submission_deadline",
+            "max_participants",
+            "prize_information",
+            "status",
+        ]
+        widgets = {
+            "registration_deadline": forms.DateTimeInput(attrs={"type": "datetime-local"}),
+            "submission_deadline": forms.DateTimeInput(attrs={"type": "datetime-local"}),
+            "description": forms.Textarea(attrs={"rows": 5}),
+            "rules": forms.Textarea(attrs={"rows": 5}),
+            "prize_information": forms.Textarea(attrs={"rows": 4}),
+        }
+
+
+class ContestSubmissionForm(forms.ModelForm):
+    class Meta:
+        model = ContestSubmission
+        fields = ["project", "submission_title", "description"]
+        widgets = {"description": forms.Textarea(attrs={"rows": 6})}
+
+    def __init__(self, *args, user=None, contest=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if user is not None:
+            self.fields["project"].queryset = Project.objects.filter(owner=user)
+        self.contest = contest
+
+
+class ReportForm(forms.ModelForm):
+    class Meta:
+        model = Report
+        fields = ["reason", "description"]
+        widgets = {"description": forms.Textarea(attrs={"rows": 5})}
+
+
 class RegisterForm(UserCreationForm):
+
     email = forms.EmailField(required=True)
 
     class Meta:

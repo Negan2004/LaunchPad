@@ -5,7 +5,10 @@
 
 {% block content %}
 
-<section class="profile-hero card">
+<section class="profile-hero card{% if profile.cover_image|stored_file_exists %} profile-hero--cover{% endif %}">
+    {% if profile.cover_image|stored_file_exists %}
+        <img class="profile-cover-image" src="{{ profile.cover_image.url }}" alt="">
+    {% endif %}
     <div class="profile-avatar">
         {% if profile.avatar|stored_file_exists %}
             <img src="{{ profile.avatar.url }}" alt="{{ profile_user.username }}'s avatar">
@@ -13,10 +16,21 @@
             <span aria-label="{{ profile_user.username }}">{{ profile_user.username|first|upper }}</span>
         {% endif %}
     </div>
-    <div>
+    <div class="profile-hero__content">
         <p class="eyebrow">Developer space</p>
-        <h1>{{ profile_user.username }}</h1>
+        <h1>{% if profile.display_name|has_profile_text %}{{ profile.display_name|clean_profile_text }}{% else %}{{ profile_user.username }}{% endif %}</h1>
+        <p class="profile-username">@{{ profile_user.username }}</p>
         <p class="profile-member-since">Member since {{ profile.created_at|date:"M Y" }}</p>
+        <div class="profile-meta" aria-label="Profile network counts">
+            <a class="badge" href="{% url 'followers_list' profile_user.username %}">{{ follower_count }} Followers</a>
+            <a class="badge" href="{% url 'following_list' profile_user.username %}">{{ following_count }} Following</a>
+        </div>
+        {% if profile.college|has_profile_text or profile.education|has_profile_text %}
+            <p class="profile-education">
+                {% if profile.education|has_profile_text %}{{ profile.education|clean_profile_text }}{% endif %}
+                {% if profile.college|has_profile_text %}{% if profile.education|has_profile_text %} · {% endif %}{{ profile.college|clean_profile_text }}{% endif %}
+            </p>
+        {% endif %}
         {% if profile.bio|has_profile_text %}
             <div class="profile-bio">{{ profile.bio|clean_profile_text }}</div>
         {% endif %}
@@ -26,13 +40,28 @@
                 <p>{{ profile.skills|clean_profile_text }}</p>
             </div>
         {% endif %}
-        {% if profile.portfolio_url|has_profile_text %}
+        {% if user.is_authenticated and user != profile_user %}
             <div class="profile-actions">
-                <a class="button button--secondary" href="{{ profile.portfolio_url|clean_profile_text }}" target="_blank" rel="noopener">Visit portfolio ↗</a>
+                <form method="post" action="{% url 'toggle_follow' profile_user.username %}">
+                    {% csrf_token %}
+                    {% if is_following %}
+                        <button type="submit" class="button button--secondary">Following</button>
+                    {% else %}
+                        <button type="submit" class="button button--secondary">Follow</button>
+                    {% endif %}
+                </form>
             </div>
         {% endif %}
+        <div class="profile-actions profile-actions--links">
+            {% if profile.portfolio_url|has_profile_text %}<a class="button button--secondary" href="{{ profile.portfolio_url|clean_profile_text }}" target="_blank" rel="noopener">Portfolio ↗</a>{% endif %}
+            {% if profile.github_url|has_profile_text %}<a class="button button--secondary" href="{{ profile.github_url|clean_profile_text }}" target="_blank" rel="noopener">GitHub ↗</a>{% endif %}
+            {% if profile.linkedin_url|has_profile_text %}<a class="button button--secondary" href="{{ profile.linkedin_url|clean_profile_text }}" target="_blank" rel="noopener">LinkedIn ↗</a>{% endif %}
+            {% if profile.twitter_url|has_profile_text %}<a class="button button--secondary" href="{{ profile.twitter_url|clean_profile_text }}" target="_blank" rel="noopener">Social ↗</a>{% endif %}
+        </div>
     </div>
 </section>
+
+{% if profile_badges or achievements %}<section class="recognition-section" style="margin-top: 2.5rem;"><div class="section-heading"><div><p class="eyebrow">Recognition</p><h2>Progress worth showing.</h2></div></div><div class="recognition-grid">{% for item in profile_badges %}<article class="panel recognition-card"><span class="badge">{{ item.badge.name }}</span><p>{{ item.badge.description }}</p></article>{% endfor %}{% for item in achievements %}<article class="panel recognition-card"><span class="badge badge--featured">Achievement</span><h3>{{ item.title }}</h3><p>{{ item.description }}</p></article>{% endfor %}</div></section>{% endif %}
 
 <section style="margin-top: 3.5rem;">
     <div class="section-heading">
@@ -57,9 +86,9 @@
                         {% endif %}
                     {% endwith %}
                     <div class="project-card__body">
-                        <div class="project-card__meta"><span class="badge badge--category">{{ project.category }}</span></div>
+                        <div class="project-card__meta"><span class="badge badge--category">{{ project.category }}</span><span class="badge badge--{{ project.stage }}">{{ project.get_stage_display }}</span></div>
                         <h3 class="project-card__title"><a href="{% url 'project_detail' project.pk %}">{{ project.title }}</a></h3>
-                        <p class="project-card__description">{{ project.description|truncatewords:24 }}</p>
+                        <p class="project-card__description">{% if project.short_description %}{{ project.short_description }}{% else %}{{ project.description|truncatewords:24 }}{% endif %}</p>
                         <div class="project-card__footer"><span>Published {{ project.created_at|date:"M Y" }}</span><a class="text-link" href="{% url 'project_detail' project.pk %}">Open project</a></div>
                     </div>
                 </article>

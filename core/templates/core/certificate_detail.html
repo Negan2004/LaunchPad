@@ -1,0 +1,3 @@
+{% extends "core/base.html" %}
+{% block title %}Certificate {{ certificate.certificate_number }} — LaunchPad{% endblock %}
+{% block content %}<section class="certificate-card panel"><p class="eyebrow">LaunchPad recognition</p><h1>Certificate of achievement</h1><p>This certifies that <strong>{{ certificate.submission.participant.user.username }}</strong> received recognition for <strong>{{ certificate.submission.submission_title }}</strong> in <strong>{{ certificate.submission.contest.title }}</strong>.</p><span class="certificate-number">{{ certificate.certificate_number }}</span><p class="muted">Issued {{ certificate.issued_at|date:"M j, Y" }}</p></section>{% endblock %}

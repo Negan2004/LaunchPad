@@ -4,7 +4,6 @@
 {% block title %}Profile Studio — LaunchPad{% endblock %}
 
 {% block content %}
-
 <header class="page-intro profile-studio-intro">
     <div class="page-intro__copy">
         <p class="eyebrow">Profile studio</p>
@@ -17,82 +16,48 @@
     <aside class="profile-preview-card">
         <p class="eyebrow">Profile preview</p>
         <div class="profile-preview-card__avatar">
-            {% if form.instance.avatar|stored_file_exists %}
-                <img src="{{ form.instance.avatar.url }}" alt="{{ user.username }}'s current avatar">
-            {% else %}
-                {{ user.username|first|upper }}
-            {% endif %}
+            {% if form.instance.avatar|stored_file_exists %}<img src="{{ form.instance.avatar.url }}" alt="{{ user.username }}'s current avatar">{% else %}{{ user.username|first|upper }}{% endif %}
         </div>
-        <h2>{{ user.username }}</h2>
-        {% if form.instance.bio|has_profile_text %}
-            <p>{{ form.instance.bio|clean_profile_text }}</p>
-        {% else %}
-            <p class="muted">Your public bio will appear here.</p>
-        {% endif %}
-        {% if form.instance.skills|has_profile_text %}
-            <span class="profile-preview-card__skills">{{ form.instance.skills|clean_profile_text }}</span>
-        {% endif %}
+        <h2>{% if form.instance.display_name|has_profile_text %}{{ form.instance.display_name|clean_profile_text }}{% else %}{{ user.username }}{% endif %}</h2>
+        <p class="muted">@{{ user.username }}</p>
+        {% if form.instance.bio|has_profile_text %}<p>{{ form.instance.bio|clean_profile_text }}</p>{% else %}<p class="muted">Your public bio will appear here.</p>{% endif %}
+        {% if form.instance.skills|has_profile_text %}<span class="profile-preview-card__skills">{{ form.instance.skills|clean_profile_text }}</span>{% endif %}
         <a class="text-link" href="{% url 'public_profile' user.username %}">View public profile →</a>
     </aside>
 
     <form class="panel form-card profile-studio-form" method="post" enctype="multipart/form-data">
         {% csrf_token %}
-
+        {% if form.non_field_errors %}{{ form.non_field_errors }}{% endif %}
         <section class="studio-section">
-            <div class="studio-section__heading">
-                <p class="eyebrow">Identity image</p>
-                <h2>Avatar</h2>
-                <p>Use a clear image that feels right for your public developer space.</p>
-            </div>
-            <div class="avatar-field">
-                <label for="{{ form.avatar.id_for_label }}">Upload or change avatar</label>
-                {{ form.avatar }}
-                {{ form.avatar.errors }}
+            <div class="studio-section__heading"><p class="eyebrow">Identity image</p><h2>Avatar and cover</h2><p>Use clear images that make your public developer space feel recognizable.</p></div>
+            <div class="field-grid field-grid--two">
+                <div class="avatar-field"><label for="{{ form.avatar.id_for_label }}">Avatar</label>{{ form.avatar }}{{ form.avatar.errors }}</div>
+                <div class="avatar-field"><label for="{{ form.cover_image.id_for_label }}">Cover image</label>{{ form.cover_image }}{{ form.cover_image.errors }}</div>
             </div>
         </section>
-
         <section class="studio-section">
-            <div class="studio-section__heading">
-                <p class="eyebrow">Identity</p>
-                <h2>Your public introduction</h2>
-                <p>Your username is <strong>{{ user.username }}</strong>. Add context to the work you share.</p>
-            </div>
-            <div class="field-grid">
-                <div class="field-grid__full">
-                    <label for="{{ form.bio.id_for_label }}">Bio</label>
-                    {{ form.bio }}
-                    {{ form.bio.errors }}
-                </div>
+            <div class="studio-section__heading"><p class="eyebrow">Identity</p><h2>Your public introduction</h2><p>Your username is <strong>{{ user.username }}</strong>. Add context to the work you share.</p></div>
+            <div class="field-grid field-grid--two">
+                <div><label for="{{ form.display_name.id_for_label }}">Display name</label>{{ form.display_name }}{{ form.display_name.errors }}</div>
+                <div><label for="{{ form.college.id_for_label }}">College</label>{{ form.college }}{{ form.college.errors }}</div>
+                <div><label for="{{ form.education.id_for_label }}">Education</label>{{ form.education }}{{ form.education.errors }}</div>
+                <div class="field-grid__full"><label for="{{ form.bio.id_for_label }}">Bio</label>{{ form.bio }}{{ form.bio.errors }}</div>
             </div>
         </section>
-
         <section class="studio-section">
-            <div class="studio-section__heading">
-                <p class="eyebrow">Technical strengths</p>
-                <h2>Skills</h2>
-                <p>Describe the tools, disciplines, or areas you are developing.</p>
-            </div>
-            <label for="{{ form.skills.id_for_label }}">Skills</label>
-            {{ form.skills }}
-            {{ form.skills.errors }}
+            <div class="studio-section__heading"><p class="eyebrow">Technical strengths</p><h2>Skills</h2><p>Describe the tools, disciplines, or areas you are developing.</p></div>
+            <label for="{{ form.skills.id_for_label }}">Skills</label>{{ form.skills }}{{ form.skills.errors }}
         </section>
-
         <section class="studio-section">
-            <div class="studio-section__heading">
-                <p class="eyebrow">Portfolio</p>
-                <h2>Where else to find you</h2>
-                <p>Link to a portfolio or personal site when you are ready.</p>
+            <div class="studio-section__heading"><p class="eyebrow">Portfolio</p><h2>Where else to find you</h2><p>Link to your portfolio and professional social profiles.</p></div>
+            <div class="field-grid field-grid--two">
+                <div><label for="{{ form.portfolio_url.id_for_label }}">Portfolio URL</label>{{ form.portfolio_url }}{{ form.portfolio_url.errors }}</div>
+                <div><label for="{{ form.github_url.id_for_label }}">GitHub URL</label>{{ form.github_url }}{{ form.github_url.errors }}</div>
+                <div><label for="{{ form.linkedin_url.id_for_label }}">LinkedIn URL</label>{{ form.linkedin_url }}{{ form.linkedin_url.errors }}</div>
+                <div><label for="{{ form.twitter_url.id_for_label }}">Social URL</label>{{ form.twitter_url }}{{ form.twitter_url.errors }}</div>
             </div>
-            <label for="{{ form.portfolio_url.id_for_label }}">Portfolio URL</label>
-            {{ form.portfolio_url }}
-            {{ form.portfolio_url.errors }}
         </section>
-
-        <div class="profile-studio-form__actions">
-            <button type="submit">Save profile changes</button>
-            <a class="button button--secondary" href="{% url 'public_profile' user.username %}">View public profile</a>
-        </div>
+        <div class="profile-studio-form__actions"><button type="submit">Save profile changes</button><a class="button button--secondary" href="{% url 'public_profile' user.username %}">View public profile</a></div>
     </form>
 </section>
-
 {% endblock %}

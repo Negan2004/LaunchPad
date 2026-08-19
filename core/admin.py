@@ -1,41 +1,52 @@
 from django.contrib import admin
 from .models import (
-    Category,
-    Profile,
-    Project,
-    ProjectImage,
-    Like,
-    Comment,
-    Follow,
-    BookmarkCollection,
-    Bookmark,
-    Notification,
-    Contest,
-    ContestParticipant,
-    ContestSubmission,
-    Certificate,
-    Badge,
-    UserBadge,
-    Achievement,
-    Leaderboard,
+    Category, Profile, Project, ProjectImage, Like, Comment, Follow,
+    BookmarkCollection, Bookmark, Notification, Contest, ContestParticipant,
+    ContestSubmission, Certificate, Badge, UserBadge, Achievement, Leaderboard,
+    ProjectView, ProfileVisit, ActivityEvent, Report,
 )
 
 
-admin.site.register(Category)
-admin.site.register(Profile)
-admin.site.register(Project)
-admin.site.register(ProjectImage)
-admin.site.register(Like)
-admin.site.register(Comment)
-admin.site.register(Follow)
-admin.site.register(BookmarkCollection)
-admin.site.register(Bookmark)
-admin.site.register(Notification)
-admin.site.register(Contest)
-admin.site.register(ContestParticipant)
-admin.site.register(ContestSubmission)
-admin.site.register(Certificate)
-admin.site.register(Badge)
-admin.site.register(UserBadge)
-admin.site.register(Achievement)
-admin.site.register(Leaderboard)
+@admin.register(Project)
+class ProjectAdmin(admin.ModelAdmin):
+    list_display = ("title", "owner", "category", "status", "visibility", "featured", "views_count", "created_at")
+    list_filter = ("status", "visibility", "featured", "stage", "category")
+    search_fields = ("title", "description", "tags", "technologies", "owner__username")
+    list_editable = ("featured", "status", "visibility")
+
+
+@admin.register(Contest)
+class ContestAdmin(admin.ModelAdmin):
+    list_display = ("title", "status", "registration_deadline", "submission_deadline", "participant_count")
+    list_filter = ("status",)
+    search_fields = ("title", "description", "rules")
+
+    @admin.display(description="Participants")
+    def participant_count(self, obj):
+        return obj.participants.count()
+
+
+@admin.register(Report)
+class ReportAdmin(admin.ModelAdmin):
+    list_display = ("reason", "reporter", "project", "status", "created_at")
+    list_filter = ("status", "created_at")
+    search_fields = ("reason", "description", "reporter__username", "project__title")
+    list_editable = ("status",)
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ("recipient", "notification_type", "is_read", "created_at")
+    list_filter = ("notification_type", "is_read")
+    search_fields = ("recipient__username", "sender__username", "message")
+
+
+for model in [
+    Category, Profile, ProjectImage, Like, Comment, Follow, BookmarkCollection,
+    Bookmark, ContestParticipant, ContestSubmission, Certificate, Badge,
+    UserBadge, Achievement, Leaderboard, ProjectView, ProfileVisit, ActivityEvent,
+]:
+    try:
+        admin.site.register(model)
+    except admin.sites.AlreadyRegistered:
+        pass

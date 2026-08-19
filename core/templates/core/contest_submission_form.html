@@ -1,0 +1,3 @@
+{% extends "core/base.html" %}
+{% block title %}Submit to {{ contest.title }} — LaunchPad{% endblock %}
+{% block content %}<header class="page-intro"><div class="page-intro__copy"><p class="eyebrow">Contest submission</p><h1>Put your best work forward.</h1><p class="lede">You can update this submission until {{ contest.submission_deadline|date:"M j, Y · g:i A" }}.</p></div></header><form class="panel form-card form-layout" method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Save submission</button><a class="button button--secondary" href="{% url 'contest_detail' contest.pk %}">Cancel</a></form>{% endblock %}
