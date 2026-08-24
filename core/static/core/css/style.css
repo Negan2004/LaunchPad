@@ -289,7 +289,7 @@ h3 { margin-bottom: .45rem; color: var(--ink-950); font-size: 1.1rem; line-heigh
 .form-card { padding: clamp(1.35rem, 3.5vw, 2.6rem); }
 form p { margin: 0 0 1rem; }
 label { display: inline-block; margin-bottom: .42rem; color: var(--ink-800); font-size: .9rem; font-weight: 750; }
-input[type="text"], input[type="password"], input[type="email"], input[type="url"], input[type="file"], select, textarea {
+input[type="text"], input[type="password"], input[type="email"], input[type="url"], input[type="file"], input[type="search"], input[type="number"], input[type="date"], input[type="datetime-local"], select, textarea {
     width: 100%;
     border: 1px solid #bdcad9;
     border-radius: var(--radius-sm);
@@ -351,6 +351,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue-500); outli
 .avatar-field { padding: 1rem; border: 1px dashed #9fb6d0; border-radius: var(--radius-md); background: #f8fbff; }
 .avatar-field input[type="file"] { margin-top: .25rem; }
 .field-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+@media (min-width: 700px) { .field-grid--two { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .profile-studio-form textarea#id_bio { min-height: 7rem; }
 .profile-studio-form textarea#id_skills { min-height: 5rem; }
 .profile-studio-form__actions { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--slate-200); }

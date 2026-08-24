@@ -879,9 +879,11 @@ def toggle_follow(request, username):
 
 def followers_list(request, username):
     profile_user = get_object_or_404(User, username=username)
+    # user_list.html reads person.profile.display_name and .college for every
+    # row, so the profile has to come along or each row costs a query.
     followers = User.objects.filter(
         following__following=profile_user,
-    ).distinct().order_by("username")
+    ).select_related("profile").distinct().order_by("username")
     return render(
         request,
         "core/user_list.html",
@@ -897,7 +899,7 @@ def following_list(request, username):
     profile_user = get_object_or_404(User, username=username)
     following = User.objects.filter(
         followers__follower=profile_user,
-    ).distinct().order_by("username")
+    ).select_related("profile").distinct().order_by("username")
     return render(
         request,
         "core/user_list.html",
@@ -1338,6 +1340,16 @@ def refresh_leaderboards():
                 to_update,
                 ["points", "rank", "updated_at"],
             )
+
+        # Mark the period as freshly computed even when no row changed.
+        # leaderboards_are_stale() reads MAX(updated_at); without this touch a
+        # settled leaderboard never looks fresh, so every request would pay for
+        # a full recomputation forever.
+        Leaderboard.objects.filter(
+            period=period,
+            period_start=start,
+            period_end=None,
+        ).update(updated_at=now)
 
 
 def leaderboards_are_stale():

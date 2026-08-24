@@ -361,3 +361,110 @@ class QueryCountTests(TestCase):
             self.client.get(reverse("analytics"))
 
         self.assertEqual(len(many), len(one), "analytics still has an N+1")
+
+
+class ScaleRegressionTests(TestCase):
+    """Bugs that only surfaced once the dataset was realistic."""
+
+    def setUp(self):
+        self.person = User.objects.create_user("scale-target", password="pw-perf-1")
+
+    def follower_url(self):
+        return reverse("followers_list", args=[self.person.username])
+
+    def add_followers(self, count):
+        from .models import Follow, Profile
+
+        for index in range(count):
+            follower = User.objects.create_user(
+                f"scale-follower-{index}", password="pw-perf-1"
+            )
+            Profile.objects.create(user=follower, display_name=f"Person {index}")
+            Follow.objects.create(follower=follower, following=self.person)
+
+    def test_followers_list_does_not_scale_queries_with_follower_count(self):
+        """user_list.html reads person.profile per row; it must be joined in."""
+        self.add_followers(12)
+        self.client.get(self.follower_url())
+
+        with CaptureQueriesContext(connection) as many:
+            self.client.get(self.follower_url())
+
+        from .models import Follow
+
+        Follow.objects.exclude(pk=Follow.objects.first().pk).delete()
+
+        with CaptureQueriesContext(connection) as one:
+            self.client.get(self.follower_url())
+
+        self.assertEqual(
+            len(many),
+            len(one),
+            f"followers_list still has an N+1 on Profile "
+            f"({len(many)} queries for 12 followers vs {len(one)} for 1)",
+        )
+
+    def test_following_list_does_not_scale_queries_with_count(self):
+        from .models import Follow, Profile
+
+        for index in range(12):
+            target = User.objects.create_user(
+                f"scale-followed-{index}", password="pw-perf-1"
+            )
+            Profile.objects.create(user=target, display_name=f"Target {index}")
+            Follow.objects.create(follower=self.person, following=target)
+
+        url = reverse("following_list", args=[self.person.username])
+        self.client.get(url)
+
+        with CaptureQueriesContext(connection) as many:
+            self.client.get(url)
+
+        Follow.objects.exclude(pk=Follow.objects.first().pk).delete()
+
+        with CaptureQueriesContext(connection) as one:
+            self.client.get(url)
+
+        self.assertEqual(len(many), len(one), "following_list still has an N+1")
+
+    def test_a_settled_leaderboard_stops_recomputing(self):
+        """The staleness marker must advance even when no ranking changed.
+
+        refresh_leaderboards() only wrote updated_at on rows it created or
+        changed. Once the ranking settled, MAX(updated_at) froze, every request
+        looked stale, and the throttle stopped working entirely.
+        """
+        for index in range(6):
+            user = User.objects.create_user(f"settled-{index}", password="pw-perf-1")
+            ActivityEvent.objects.create(
+                user=user, event_type="like_received", points=index
+            )
+
+        # First pass populates the table.
+        self.client.get(reverse("leaderboard"))
+        # Second pass changes nothing at all.
+        self.client.get(reverse("leaderboard"))
+
+        with CaptureQueriesContext(connection) as third:
+            self.client.get(reverse("leaderboard"))
+
+        self.assertLess(
+            len(third),
+            12,
+            f"a settled leaderboard still recomputes on every request "
+            f"({len(third)} queries)",
+        )
+
+    def test_the_staleness_marker_advances_on_an_unchanged_refresh(self):
+        from django.db.models import Max
+
+        User.objects.create_user("marker-user", password="pw-perf-1")
+        refresh_leaderboards()
+        first = Leaderboard.objects.aggregate(m=Max("updated_at"))["m"]
+
+        refresh_leaderboards()
+        second = Leaderboard.objects.aggregate(m=Max("updated_at"))["m"]
+
+        self.assertGreater(
+            second, first, "updated_at did not advance on an unchanged refresh"
+        )
