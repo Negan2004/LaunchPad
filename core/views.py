@@ -199,27 +199,51 @@ def project_list(request):
     # a query per card.
     projects = projects.select_related(
         "owner",
+        "owner__profile",
         "category",
     ).prefetch_related(
         "images",
     ).annotate(like_total=Count("likes")).order_by(ordering, "-created_at")
     paginator = Paginator(projects, 12)
     page = paginator.get_page(request.GET.get("page"))
+    # The cards carry a bookmark control, so resolve the whole page's bookmark
+    # state in one query instead of asking once per card.
+    page.object_list = list(page.object_list)
+    bookmarked_ids = set()
+    if request.user.is_authenticated and page.object_list:
+        bookmarked_ids = set(
+            Bookmark.objects.filter(
+                user=request.user,
+                project__in=page.object_list,
+            ).values_list("project_id", flat=True)
+        )
+    for project in page.object_list:
+        project.is_bookmarked = project.pk in bookmarked_ids
 
-    return render(
-        request,
-        "core/project_list.html",
-        {
-            "projects": page,
-            "page_obj": page,
-            "categories": Category.objects.all().order_by("name"),
-            "query": query,
-            "category": category,
-            "technology": technology,
-            "tag": tag,
-            "sort": sort,
-        },
-    )
+    # Every filter except the page number, so "load more" and the paginator
+    # links keep the current query.
+    carried_params = request.GET.copy()
+    carried_params.pop("page", None)
+    carried_params.pop("fragment", None)
+
+    context = {
+        "projects": page,
+        "page_obj": page,
+        "categories": Category.objects.all().order_by("name"),
+        "query": query,
+        "category": category,
+        "technology": technology,
+        "tag": tag,
+        "sort": sort,
+        "base_query": carried_params.urlencode(),
+        "is_first_page": page.number == 1,
+    }
+
+    # htmx asks for just the next batch of cards; everything else gets the page.
+    if is_htmx(request) and request.GET.get("fragment") == "1":
+        return render(request, "core/partials/project_grid_page.html", context)
+
+    return render(request, "core/project_list.html", context)
 
 
 def project_detail(request, pk):
@@ -574,6 +598,19 @@ def toggle_bookmark(request, pk):
             messages.success(request, f"'{project.title}' saved for later.")
 
     if is_htmx(request):
+        # Discover cards swap only their own glyph; the detail page swaps the
+        # whole engagement panel.
+        if request.GET.get("variant") == "card":
+            return render(
+                request,
+                "core/partials/card_bookmark.html",
+                {
+                    "project": project,
+                    "user_has_bookmarked": Bookmark.objects.filter(
+                        user=request.user, project=project,
+                    ).exists(),
+                },
+            )
         return render_engagement_card(request, project)
 
     return redirect(

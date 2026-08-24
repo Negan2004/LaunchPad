@@ -1,0 +1,31 @@
+{% comment %}
+Bookmark glyph shown on a Discover card.
+
+Rendered inside project_card.html and returned on its own by toggle_bookmark
+when the request came from htmx with ?variant=card, which swaps this element in
+place. Without JavaScript the form submits normally and the view redirects to
+the project, exactly as the detail-page control does.
+{% endcomment %}<span class="card-bookmark" id="card-bookmark-{{ project.pk }}">
+    {% if user.is_authenticated %}
+        <form method="post"
+              action="{% url 'toggle_bookmark' project.pk %}?variant=card"
+              hx-post="{% url 'toggle_bookmark' project.pk %}?variant=card"
+              hx-target="#card-bookmark-{{ project.pk }}"
+              hx-swap="outerHTML"
+              hx-disabled-elt="find button">
+            {% csrf_token %}
+            <button type="submit"
+                    class="card-bookmark__control{% if user_has_bookmarked %} card-bookmark__control--saved{% endif %}"
+                    aria-pressed="{% if user_has_bookmarked %}true{% else %}false{% endif %}"
+                    aria-label="{% if user_has_bookmarked %}Remove {{ project.title }} from saved work{% else %}Save {{ project.title }} for later{% endif %}">
+                <svg width="8.16667" height="10.5" viewBox="0 0 8.16667 10.5" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><path d="M0 10.5V1.16667C0 0.845833 0.114236 0.571181 0.342708 0.342708C0.571181 0.114236 0.845833 0 1.16667 0H7C7.32083 0 7.59549 0.114236 7.82396 0.342708C8.05243 0.571181 8.16667 0.845833 8.16667 1.16667V10.5L4.08333 8.75L0 10.5V10.5M1.16667 8.72083L4.08333 7.46667L7 8.72083V1.16667V1.16667V1.16667H1.16667V1.16667V1.16667V8.72083V8.72083M1.16667 1.16667V1.16667V1.16667V1.16667H7V1.16667V1.16667V1.16667H4.08333H1.16667V1.16667" fill="currentColor"/></svg>
+            </button>
+        </form>
+    {% else %}
+        <a class="card-bookmark__control"
+           href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}"
+           aria-label="Log in to save {{ project.title }}">
+            <svg width="8.16667" height="10.5" viewBox="0 0 8.16667 10.5" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><path d="M0 10.5V1.16667C0 0.845833 0.114236 0.571181 0.342708 0.342708C0.571181 0.114236 0.845833 0 1.16667 0H7C7.32083 0 7.59549 0.114236 7.82396 0.342708C8.05243 0.571181 8.16667 0.845833 8.16667 1.16667V10.5L4.08333 8.75L0 10.5V10.5M1.16667 8.72083L4.08333 7.46667L7 8.72083V1.16667V1.16667V1.16667H1.16667V1.16667V1.16667V8.72083V8.72083M1.16667 1.16667V1.16667V1.16667V1.16667H7V1.16667V1.16667V1.16667H4.08333H1.16667V1.16667" fill="currentColor"/></svg>
+        </a>
+    {% endif %}
+</span>

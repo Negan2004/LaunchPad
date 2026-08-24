@@ -1,0 +1,27 @@
+{% comment %}
+Featured Discover card (8 columns, first project on the first page only).
+
+Same data as the standard card, given the editorial lead treatment from the
+design: larger media, a heavier rule, an author byline and technology chips.
+{% endcomment %}{% load profile_extras %}<article class="article-card article-card--featured">
+    {% include "core/partials/project_card_media.html" %}
+    <hr class="article-card__rule article-card__rule--strong">
+    <div class="article-card__lower">
+        <div class="article-card__lead">
+            <h2 class="article-card__title"><a href="{% url 'project_detail' project.pk %}">{{ project.title }}</a></h2>
+            <p class="article-card__summary">{% if project.short_description %}{{ project.short_description }}{% else %}{{ project.description|truncatewords:28 }}{% endif %}</p>
+        </div>
+        <aside class="article-card__aside">
+            <a class="article-card__author" href="{% url 'public_profile' project.owner.username %}">
+                <span class="article-card__avatar">{% if project.owner.profile.avatar|stored_file_exists %}<img src="{{ project.owner.profile.avatar.url }}" alt="" loading="lazy">{% else %}{{ project.owner.username|first|upper }}{% endif %}</span>
+                <span>by {{ project.owner.username }}</span>
+            </a>
+            {% if project.technologies %}
+                <ul class="chip-row">
+                    {% for technology in project.technologies|split_commas|slice:":3" %}<li class="chip">{{ technology }}</li>{% endfor %}
+                </ul>
+            {% endif %}
+            {% include "core/partials/card_bookmark.html" with user_has_bookmarked=project.is_bookmarked %}
+        </aside>
+    </div>
+</article>

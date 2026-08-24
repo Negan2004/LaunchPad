@@ -1,0 +1,15 @@
+{% comment %}
+Standard Discover card (4 columns in the editorial grid).
+
+Reads only fields the project_list queryset already selects or prefetches, so
+adding a card never costs an extra query.
+{% endcomment %}<article class="article-card">
+    {% include "core/partials/project_card_media.html" %}
+    <hr class="article-card__rule">
+    <h2 class="article-card__title"><a href="{% url 'project_detail' project.pk %}">{{ project.title }}</a></h2>
+    <p class="article-card__note">{% if project.short_description %}{{ project.short_description }}{% else %}{{ project.description|truncatewords:18 }}{% endif %}</p>
+    <div class="article-card__foot">
+        <a class="article-card__byline" href="{% url 'public_profile' project.owner.username %}">by {{ project.owner.username }}</a>
+        {% include "core/partials/card_bookmark.html" with user_has_bookmarked=project.is_bookmarked %}
+    </div>
+</article>

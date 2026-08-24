@@ -1,0 +1,39 @@
+{% comment %}
+Discover filter bar.
+
+The primary search lives in the top navigation; this row carries the remaining
+query parameters the project_list view already understands — category,
+technology, tag and sort — as quiet editorial controls. It is a plain GET form,
+so filtering works with or without JavaScript.
+{% endcomment %}<form class="filter-bar" method="get" action="{% url 'project_list' %}">
+    {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
+    <div class="filter-bar__field">
+        <label for="id_category">Category</label>
+        <select id="id_category" name="category">
+            <option value="">All categories</option>
+            {% for item in categories %}<option value="{{ item.name }}"{% if category == item.name %} selected{% endif %}>{{ item.name }}</option>{% endfor %}
+        </select>
+    </div>
+    <div class="filter-bar__field">
+        <label for="id_technology">Technology</label>
+        <input id="id_technology" type="text" name="technology" value="{{ technology }}" placeholder="Django, Python...">
+    </div>
+    <div class="filter-bar__field">
+        <label for="id_tag">Tag</label>
+        <input id="id_tag" type="text" name="tag" value="{{ tag }}" placeholder="AI, education...">
+    </div>
+    <div class="filter-bar__field">
+        <label for="id_sort">Sort</label>
+        <select id="id_sort" name="sort">
+            <option value="latest"{% if sort == 'latest' %} selected{% endif %}>Latest</option>
+            <option value="trending"{% if sort == 'trending' %} selected{% endif %}>Trending</option>
+            <option value="most_viewed"{% if sort == 'most_viewed' %} selected{% endif %}>Most viewed</option>
+            <option value="most_liked"{% if sort == 'most_liked' %} selected{% endif %}>Most liked</option>
+            <option value="featured"{% if sort == 'featured' %} selected{% endif %}>Featured</option>
+        </select>
+    </div>
+    <div class="filter-bar__actions">
+        <button class="filter-bar__apply" type="submit">Apply</button>
+        {% if query or category or technology or tag or sort != 'latest' %}<a class="filter-bar__clear" href="{% url 'project_list' %}">Clear</a>{% endif %}
+    </div>
+</form>

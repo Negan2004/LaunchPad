@@ -1,0 +1,16 @@
+{% comment %}
+One page of Discover cards plus the control that loads the next page.
+
+Rendered inline by project_list and returned on its own when htmx asks for
+?fragment=1, which replaces the load-more control with the next batch of cards
+followed by a fresh control. The control is also a plain link, so without
+JavaScript it still walks the paginator page by page.
+{% endcomment %}{% for project in projects %}{% if is_first_page and forloop.first %}{% include "core/partials/project_card_featured.html" %}{% else %}{% include "core/partials/project_card.html" %}{% endif %}
+{% endfor %}{% if page_obj.has_next %}<div class="editorial-grid__more" id="load-more">
+    <a class="editorial-button"
+       href="?{{ base_query }}{% if base_query %}&{% endif %}page={{ page_obj.next_page_number }}"
+       hx-get="?{{ base_query }}{% if base_query %}&{% endif %}page={{ page_obj.next_page_number }}&fragment=1"
+       hx-target="#load-more"
+       hx-swap="outerHTML"
+       hx-disabled-elt="this">Load more projects</a>
+</div>{% endif %}

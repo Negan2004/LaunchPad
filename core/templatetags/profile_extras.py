@@ -30,3 +30,12 @@ def clean_profile_text(value):
         return ""
 
     return str(value).strip()
+
+
+@register.filter
+def split_commas(value):
+    """Comma-separated model text (technologies, tags) as a clean list."""
+    if not value:
+        return []
+
+    return [part.strip() for part in str(value).split(",") if part.strip()]
