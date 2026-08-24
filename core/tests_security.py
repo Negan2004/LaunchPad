@@ -1,12 +1,10 @@
 """Visibility and authorisation, exercised against seeded-style data.
 
-The two classes at the bottom document defects that are still open. They use
-@expectedFailure deliberately: the suite stays green while the bug exists, and
-the moment someone fixes it the test reports an UNEXPECTED SUCCESS, which is a
-loud signal to delete the marker and keep the assertion.
+The two classes at the bottom cover defects that were open during the dataset
+phase and are now fixed. They were written first as @expectedFailure; the
+markers came off once the behaviour was corrected, and the assertions stayed.
 """
 
-import unittest
 from datetime import timedelta
 
 from django.contrib.auth.models import User
@@ -256,15 +254,17 @@ class VisibilityEnforcementTests(TestCase):
         self.assertEqual(submission.status, "submitted")
 
 
-class OpenDefectContestDraftVisibility(TestCase):
-    """P1, still open: a draft contest is readable by direct URL.
+class ContestDraftVisibilityTests(TestCase):
+    """P1, fixed: a draft contest used to be readable by direct URL.
 
-    `contests` excludes drafts from the listing, but `contest_detail` performs
-    no status check, so the brief, rules and prize information of an unpublished
-    contest are served to anonymous visitors.
+    `contests` excluded drafts from the listing, but `contest_detail` did no
+    status check, so the brief, rules and prize information of an unpublished
+    contest were served to anonymous visitors.
 
-    Fix: gate contest_detail on status, 404 for drafts unless request.user is
-    staff. Roughly two lines in core/views.py.
+    Contests have no owner field - they are staff-managed - so the rule is that
+    a draft is visible to staff only, enforced by get_accessible_contest(),
+    which mirrors get_accessible_project() and returns 404 rather than 403 so
+    the response does not confirm the contest exists.
     """
 
     def setUp(self):
@@ -285,7 +285,6 @@ class OpenDefectContestDraftVisibility(TestCase):
 
         self.assertNotContains(response, "Unannounced Sponsor Contest")
 
-    @unittest.expectedFailure
     def test_a_draft_contest_is_not_readable_by_direct_url(self):
         response = self.client.get(
             reverse("contest_detail", args=[self.draft.pk])
@@ -297,31 +296,36 @@ class OpenDefectContestDraftVisibility(TestCase):
             "draft contests are still publicly readable by direct URL",
         )
 
-    @unittest.expectedFailure
     def test_a_draft_contest_does_not_leak_its_rules_and_prizes(self):
         response = self.client.get(
             reverse("contest_detail", args=[self.draft.pk])
         )
 
-        self.assertNotContains(response, "Confidential rules.")
-        self.assertNotContains(response, "Confidential prize details.")
+        # assertNotContains asserts the status code too, and the correct
+        # response here is 404 rather than a 200 with the content stripped.
+        self.assertNotContains(response, "Confidential rules.", status_code=404)
+        self.assertNotContains(
+            response, "Confidential prize details.", status_code=404
+        )
 
 
-class OpenDefectPrivateProjectSubmission(TestCase):
-    """P1, still open: a private or draft project can be entered into a contest.
+class PrivateProjectSubmissionTests(TestCase):
+    """P1, fixed: a private or draft project could be entered into a contest.
 
-    `ContestSubmissionForm` filters the project field to `owner=user` but never
-    by status or visibility, so work the owner deliberately kept private can be
-    entered into a public competition, judged, scored and awarded a certificate.
+    `ContestSubmissionForm` filtered the project field to `owner=user` but not
+    by status or visibility, so work the owner deliberately kept private could
+    be entered into a public competition, judged, scored and awarded a
+    certificate - and winning sets featured=True on it.
 
-    Scope note, corrected from the original audit: the contest page renders
-    `submission.submission_title`, not the project title, and does not link to
-    the project, so this is primarily a data-integrity defect rather than a
-    direct content leak. The submitting user's name and the entry's status do
-    become public, and a private project can be made `featured` by winning.
+    This was a data-integrity defect rather than a content leak: the contest
+    page renders submission_title, not the project title, and does not link to
+    the project, which still 404s. The submitter's username and the entry's
+    status did become public.
 
-    Fix: filter the queryset to status="published", visibility="public" in
-    ContestSubmissionForm.__init__. One line.
+    The queryset is now restricted to published + public work. That both keeps
+    private projects out of the dropdown and makes ModelChoiceField reject a
+    forged project id on POST, before any ContestSubmission is created. The
+    project's own visibility is never modified.
     """
 
     def setUp(self):
@@ -379,7 +383,6 @@ class OpenDefectPrivateProjectSubmission(TestCase):
 
         self.assertNotContains(response, "Confidential Prototype")
 
-    @unittest.expectedFailure
     def test_a_private_project_cannot_be_entered_into_a_contest(self):
         self.submit()
 
@@ -388,7 +391,6 @@ class OpenDefectPrivateProjectSubmission(TestCase):
             "a private, draft project was accepted into a public contest",
         )
 
-    @unittest.expectedFailure
     def test_the_submission_form_only_offers_public_published_projects(self):
         response = self.client.get(
             reverse("contest_submit", args=[self.contest.pk])

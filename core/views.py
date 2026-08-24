@@ -283,6 +283,24 @@ def get_accessible_project(request, pk):
     )
 
 
+def get_accessible_contest(request, pk):
+    """Return a contest the requester is allowed to see.
+
+    Mirrors get_accessible_project. Contests have no owner field - they are
+    staff-managed, which is why create/edit/manage/review all gate on
+    staff_required - so a draft is visible to staff only. Everyone else gets a
+    404 rather than a 403, matching how hidden projects behave: the response
+    must not confirm that the contest exists.
+    """
+    if request.user.is_authenticated and request.user.is_staff:
+        return get_object_or_404(Contest, pk=pk)
+
+    return get_object_or_404(
+        Contest,
+        Q(pk=pk) & ~Q(status="draft"),
+    )
+
+
 @login_required
 def add_comment(request, pk):
     project = get_accessible_project(request, pk)
@@ -1050,7 +1068,7 @@ def contests(request):
 
 
 def contest_detail(request, pk):
-    contest = get_object_or_404(Contest, pk=pk)
+    contest = get_accessible_contest(request, pk)
     participant = None
     if request.user.is_authenticated:
         participant = ContestParticipant.objects.filter(contest=contest, user=request.user).first()
@@ -1064,7 +1082,7 @@ def contest_detail(request, pk):
 
 @login_required
 def contest_register(request, pk):
-    contest = get_object_or_404(Contest, pk=pk)
+    contest = get_accessible_contest(request, pk)
     if request.method == "POST":
         now = timezone.now()
         if contest.status not in {"upcoming", "active"} or now > contest.registration_deadline:
@@ -1081,7 +1099,7 @@ def contest_register(request, pk):
 
 @login_required
 def contest_submit(request, pk):
-    contest = get_object_or_404(Contest, pk=pk)
+    contest = get_accessible_contest(request, pk)
     participant = get_object_or_404(ContestParticipant, contest=contest, user=request.user)
     submission = ContestSubmission.objects.filter(participant=participant).first()
     now = timezone.now()

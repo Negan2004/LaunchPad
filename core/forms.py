@@ -203,7 +203,17 @@ class ContestSubmissionForm(forms.ModelForm):
     def __init__(self, *args, user=None, contest=None, **kwargs):
         super().__init__(*args, **kwargs)
         if user is not None:
-            self.fields["project"].queryset = Project.objects.filter(owner=user)
+            # Only work the owner has actually published publicly may be
+            # entered. Filtering the queryset does double duty: it keeps
+            # private and draft projects out of the dropdown, and ModelChoiceField
+            # re-validates against the same queryset on POST, so a forged
+            # project id is rejected before a ContestSubmission is created.
+            # The project's own visibility is never changed by submitting it.
+            self.fields["project"].queryset = Project.objects.filter(
+                owner=user,
+                status="published",
+                visibility="public",
+            )
         self.contest = contest
 
 
