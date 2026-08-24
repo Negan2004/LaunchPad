@@ -41,16 +41,7 @@
             </div>
         {% endif %}
         {% if user.is_authenticated and user != profile_user %}
-            <div class="profile-actions">
-                <form method="post" action="{% url 'toggle_follow' profile_user.username %}">
-                    {% csrf_token %}
-                    {% if is_following %}
-                        <button type="submit" class="button button--secondary">Following</button>
-                    {% else %}
-                        <button type="submit" class="button button--secondary">Follow</button>
-                    {% endif %}
-                </form>
-            </div>
+            {% include "core/partials/follow_button.html" %}
         {% endif %}
         <div class="profile-actions profile-actions--links">
             {% if profile.portfolio_url|has_profile_text %}<a class="button button--secondary" href="{{ profile.portfolio_url|clean_profile_text }}" target="_blank" rel="noopener">Portfolio ↗</a>{% endif %}
@@ -76,7 +67,7 @@
         <div class="project-grid">
             {% for project in projects %}
                 <article class="project-card card">
-                    {% with primary_image=project.images.first %}
+                    {% with primary_image=project.images.all|first %}
                         {% if primary_image %}
                             <a class="project-card__image" href="{% url 'project_detail' project.pk %}">
                                 <img src="{{ primary_image.image.url }}" alt="{{ primary_image.caption|default:project.title }}">

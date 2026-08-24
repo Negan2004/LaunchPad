@@ -1,0 +1,17 @@
+{% extends "core/base.html" %}
+
+{% block title %}Page not found — LaunchPad{% endblock %}
+
+{% block content %}
+<section class="empty-state">
+    <div>
+        <div class="empty-state__icon" aria-hidden="true">⌁</div>
+        <h1>We couldn't find that page.</h1>
+        <p class="lede">The link may be out of date, or the project may have been made private or removed by its owner.</p>
+        <div class="button-row">
+            <a class="button" href="{% url 'project_list' %}">Explore projects</a>
+            <a class="button button--secondary" href="{% url 'home' %}">Back to home</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -527,3 +527,50 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue-500); outli
 .badge--contest_result, .badge--badge, .badge--follow, .badge--like, .badge--comment { background: var(--mint-100); color: #087565; }
 @media (max-width: 900px) { .recognition-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 620px) { .recognition-grid { grid-template-columns: 1fr; } }
+
+/* Flash messages ---------------------------------------------------------- */
+
+.message-stack { display: grid; gap: .6rem; margin-bottom: 2rem; }
+.message { display: flex; align-items: flex-start; gap: .6rem; padding: .8rem 1rem; border-radius: var(--radius-sm); border-left: 3px solid currentColor; font-size: .92rem; }
+.message__text { color: var(--ink-800); }
+.message--success { background: var(--mint-100); color: var(--mint-500); }
+.message--error { background: var(--rose-100); color: var(--rose-700); }
+.message--warning { background: var(--amber-100); color: var(--amber-700); }
+.message--info { background: var(--blue-100); color: var(--blue-600); }
+.message--debug { background: var(--surface-muted); color: var(--slate-600); }
+
+@media (prefers-reduced-motion: no-preference) {
+    .message { animation: message-in .18s ease-out; }
+}
+
+@keyframes message-in {
+    from { opacity: 0; transform: translateY(-.25rem); }
+    to { opacity: 1; transform: none; }
+}
+
+/* Accessibility and long-content guards ----------------------------------- */
+
+:focus-visible { outline: 3px solid var(--blue-600); outline-offset: 2px; border-radius: var(--radius-sm); }
+.identity-menu__trigger:focus-visible, .nav-link:focus-visible, .nav-action:focus-visible { outline-offset: 3px; }
+
+/* User-supplied text can be a single unbroken string; keep it inside its card. */
+.project-card__title, .project-card__description, .detail-description,
+.comment-body, .profile-bio, .collection-card h3, .notification-card p {
+    overflow-wrap: anywhere;
+}
+
+.visually-hidden {
+    position: absolute; width: 1px; height: 1px;
+    margin: -1px; padding: 0; border: 0;
+    clip: rect(0 0 0 0); clip-path: inset(50%);
+    overflow: hidden; white-space: nowrap;
+}
+
+.skip-link {
+    position: absolute; left: .75rem; top: -3rem; z-index: 100;
+    padding: .6rem 1rem; border-radius: var(--radius-sm);
+    background: var(--ink-950); color: #fff;
+    font-size: .9rem; font-weight: 600; text-decoration: none;
+    transition: top .15s ease-out;
+}
+.skip-link:focus { top: .75rem; }

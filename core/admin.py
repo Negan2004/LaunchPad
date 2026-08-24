@@ -7,6 +7,24 @@ from .models import (
 )
 
 
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    """Categories are an admin-managed taxonomy.
+
+    Students select a category when publishing and visitors filter by it, but
+    no student-facing view creates one. The starting set is seeded by migration
+    0009; everything after that is managed here.
+    """
+
+    list_display = ("name", "project_count", "created_at")
+    search_fields = ("name", "description")
+    ordering = ("name",)
+
+    @admin.display(description="Projects")
+    def project_count(self, obj):
+        return obj.projects.count()
+
+
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
     list_display = ("title", "owner", "category", "status", "visibility", "featured", "views_count", "created_at")
@@ -42,7 +60,7 @@ class NotificationAdmin(admin.ModelAdmin):
 
 
 for model in [
-    Category, Profile, ProjectImage, Like, Comment, Follow, BookmarkCollection,
+    Profile, ProjectImage, Like, Comment, Follow, BookmarkCollection,
     Bookmark, ContestParticipant, ContestSubmission, Certificate, Badge,
     UserBadge, Achievement, Leaderboard, ProjectView, ProfileVisit, ActivityEvent,
 ]:

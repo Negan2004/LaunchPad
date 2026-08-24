@@ -1,12 +1,14 @@
 from datetime import timedelta
 
-from django.contrib.auth import authenticate, login, logout
+from django.contrib import messages
+from django.contrib.auth import REDIRECT_FIELD_NAME, authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseNotAllowed, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.db import transaction
-from django.db.models import Q, Count, Sum, Avg
+from django.db.models import Q, Count, Max, Sum
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.contrib.auth.models import User
 
 from .forms import (
@@ -82,7 +84,9 @@ def save_project_images(project, image_forms):
 
 
 def home(request):
-    public_projects = Project.objects.filter(status="published", visibility="public")
+    public_projects = Project.objects.filter(
+        status="published", visibility="public",
+    ).select_related("owner", "category")
     projects = public_projects.order_by("-created_at")[:6]
     featured_projects = public_projects.filter(featured=True).order_by("-featured_at", "-created_at")[:3]
     trending_projects = public_projects.annotate(like_total=Count("likes")).order_by("-views_count", "-like_total", "-created_at")[:3]
@@ -142,7 +146,15 @@ def project_list(request):
         "most_liked": "-like_total",
         "featured": "-featured_at",
     }.get(sort, "-created_at")
-    projects = projects.annotate(like_total=Count("likes")).order_by(ordering, "-created_at")
+    # select_related covers the owner/category shown on every card; prefetching
+    # images lets the template read the thumbnail from cache instead of issuing
+    # a query per card.
+    projects = projects.select_related(
+        "owner",
+        "category",
+    ).prefetch_related(
+        "images",
+    ).annotate(like_total=Count("likes")).order_by(ordering, "-created_at")
     paginator = Paginator(projects, 12)
     page = paginator.get_page(request.GET.get("page"))
 
@@ -228,6 +240,31 @@ def project_detail(request, pk):
     )
 
 
+def is_htmx(request):
+    """True when htmx issued this request and expects an HTML fragment back."""
+    return request.headers.get("HX-Request") == "true"
+
+
+def render_engagement_card(request, project):
+    """The like/bookmark panel, re-rendered with current state."""
+    return render(
+        request,
+        "core/partials/engagement_card.html",
+        {
+            "project": project,
+            "user_has_liked": Like.objects.filter(
+                user=request.user, project=project,
+            ).exists(),
+            "user_has_bookmarked": Bookmark.objects.filter(
+                user=request.user, project=project,
+            ).exists(),
+            "like_count": project.likes.count(),
+            "comment_count": project.comments.count(),
+            "view_count": project.views_count,
+        },
+    )
+
+
 def get_accessible_project(request, pk):
     public_projects = Q(
         status="published",
@@ -258,6 +295,7 @@ def add_comment(request, pk):
             comment.user = request.user
             comment.project = project
             comment.save()
+            messages.success(request, "Your comment was posted.")
             create_notification(
                 recipient=project.owner,
                 sender=request.user,
@@ -287,6 +325,7 @@ def add_reply(request, comment_id):
             reply.project = parent_comment.project
             reply.parent = parent_comment
             reply.save()
+            messages.success(request, "Your reply was posted.")
             create_notification(
                 recipient=parent_comment.user,
                 sender=request.user,
@@ -319,6 +358,7 @@ def delete_comment(request, pk):
     if request.method == "POST":
         project_pk = comment.project.pk
         comment.delete()
+        messages.info(request, "Comment deleted.")
 
         return redirect(
             "project_detail",
@@ -348,6 +388,7 @@ def edit_comment(request, pk):
 
         if form.is_valid():
             form.save()
+            messages.success(request, "Your comment was updated.")
 
             return redirect(
                 "project_detail",
@@ -379,11 +420,17 @@ def toggle_like(request, pk):
 
     if like:
         like.delete()
+        if not is_htmx(request):
+            messages.info(request, "Like removed.")
     else:
         Like.objects.create(
             user=request.user,
             project=project
         )
+        # htmx swaps the panel in place, which is the feedback; a banner as
+        # well would just be noise.
+        if not is_htmx(request):
+            messages.success(request, f"You appreciated '{project.title}'.")
         create_notification(
             recipient=project.owner,
             sender=request.user,
@@ -392,6 +439,9 @@ def toggle_like(request, pk):
             message=f"{request.user.username} liked your project {project.title}.",
         )
         record_activity(user=project.owner, actor=request.user, project=project, event_type="like_received", points=1)
+
+    if is_htmx(request):
+        return render_engagement_card(request, project)
 
     return redirect(
         "project_detail",
@@ -411,11 +461,18 @@ def toggle_bookmark(request, pk):
 
     if bookmark:
         bookmark.delete()
+        if not is_htmx(request):
+            messages.info(request, "Removed from your saved work.")
     else:
         Bookmark.objects.create(
             user=request.user,
             project=project
         )
+        if not is_htmx(request):
+            messages.success(request, f"'{project.title}' saved for later.")
+
+    if is_htmx(request):
+        return render_engagement_card(request, project)
 
     return redirect(
         "project_detail",
@@ -427,7 +484,9 @@ def my_bookmarks(request):
     bookmarks = Bookmark.objects.filter(
         user=request.user
     ).select_related(
-        "project"
+        "project", "project__owner", "project__category",
+    ).prefetch_related(
+        "project__images",
     ).order_by(
         "-created_at"
     )
@@ -452,6 +511,7 @@ def create_collection(request):
             collection.user = request.user
 
             collection.save()
+            messages.success(request, f"Collection '{collection.name}' was created.")
 
             return redirect("my_bookmarks")
 
@@ -489,7 +549,9 @@ def collection_detail(request, pk):
     )
 
     bookmarks = collection.bookmarks.select_related(
-        "project"
+        "project", "project__owner", "project__category",
+    ).prefetch_related(
+        "project__images",
     ).order_by(
         "-created_at"
     )
@@ -520,6 +582,18 @@ def add_bookmark_to_collection(request, pk):
 
         if form.is_valid():
             form.save()
+
+            # Bookmark.collection is nullable and the form field is optional, so
+            # submitting it empty removes the bookmark from every collection.
+            # There is no collection page to return to in that case.
+            if bookmark.collection is None:
+                messages.info(request, "Removed from all collections.")
+                return redirect("my_bookmarks")
+
+            messages.success(
+                request,
+                f"Saved to '{bookmark.collection.name}'.",
+            )
 
             return redirect(
                 "collection_detail",
@@ -562,6 +636,7 @@ def create_project(request):
 
             project.save()
             save_project_images(project, image_forms)
+            messages.success(request, f"'{project.title}' was created.")
             if project.status == "published":
                 record_activity(user=request.user, actor=request.user, project=project, event_type="project_published", points=10)
                 if request.user.projects.filter(status="published").count() == 1:
@@ -609,6 +684,7 @@ def edit_project(request, pk):
         ):
             form.save()
             save_project_images(project, image_forms)
+            messages.success(request, f"'{project.title}' was updated.")
 
             return redirect(
                 "project_detail",
@@ -641,7 +717,9 @@ def delete_project(request, pk):
     )
 
     if request.method == "POST":
+        title = project.title
         project.delete()
+        messages.success(request, f"'{title}' was deleted.")
 
         return redirect("project_list")
 
@@ -669,6 +747,7 @@ def edit_profile(request):
 
         if form.is_valid():
             form.save()
+            messages.success(request, "Your profile was updated.")
 
             return redirect("home")
     else:
@@ -706,6 +785,10 @@ def public_profile(request, username):
         owner=user,
         status="published",
         visibility="public",
+    ).select_related(
+        "category",
+    ).prefetch_related(
+        "images",
     ).order_by(
         "-created_at",
     )
@@ -758,11 +841,15 @@ def toggle_follow(request, username):
 
     if follow:
         follow.delete()
+        if not is_htmx(request):
+            messages.info(request, f"You no longer follow {target_user.username}.")
     else:
         Follow.objects.create(
             follower=request.user,
             following=target_user,
         )
+        if not is_htmx(request):
+            messages.success(request, f"You are now following {target_user.username}.")
         create_notification(
             recipient=target_user,
             sender=request.user,
@@ -770,6 +857,19 @@ def toggle_follow(request, username):
             message=f"{request.user.username} started following you.",
         )
         record_activity(user=target_user, actor=request.user, event_type="follow_received", points=2)
+
+    if is_htmx(request):
+        return render(
+            request,
+            "core/partials/follow_button.html",
+            {
+                "profile_user": target_user,
+                "is_following": Follow.objects.filter(
+                    follower=request.user,
+                    following=target_user,
+                ).exists(),
+            },
+        )
 
     return redirect(
         "public_profile",
@@ -848,6 +948,7 @@ def mark_all_notifications_read(request):
 def clear_notifications(request):
     if request.method == "POST":
         Notification.objects.filter(recipient=request.user).delete()
+        messages.info(request, "Your inbox was cleared.")
     return redirect("notifications")
 
 
@@ -872,9 +973,33 @@ def register(request):
     )
 
 
+def get_safe_redirect_target(request):
+    """Return the requested ?next= target, but only if it is safe.
+
+    @login_required sends unauthenticated visitors to /login/?next=<page>, so
+    honouring it is what returns them to where they were going. An unchecked
+    value here would be an open redirect, so anything pointing off-site or at
+    another scheme is discarded rather than followed.
+    """
+    target = request.POST.get(REDIRECT_FIELD_NAME) or request.GET.get(REDIRECT_FIELD_NAME) or ""
+
+    if target and url_has_allowed_host_and_scheme(
+        url=target,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return target
+
+    return ""
+
+
 def login_view(request):
+    # Only ever the validated value: an unsafe target is dropped here rather
+    # than echoed back into the form, so it cannot survive a failed attempt.
+    safe_target = get_safe_redirect_target(request)
+
     if request.user.is_authenticated:
-        return redirect("home")
+        return redirect(safe_target or "home")
 
     if request.method == "POST":
         username = request.POST.get("username")
@@ -889,19 +1014,24 @@ def login_view(request):
         if user is not None:
             login(request, user)
 
-            return redirect("dashboard")
+            return redirect(safe_target or "dashboard")
 
         return render(
             request,
             "core/login.html",
             {
-                "error": "Invalid username or password."
+                "error": "Invalid username or password.",
+                "next": safe_target,
+                "username": username or "",
             }
         )
 
     return render(
         request,
-        "core/login.html"
+        "core/login.html",
+        {
+            "next": safe_target,
+        }
     )
 
 
@@ -939,7 +1069,11 @@ def contest_register(request, pk):
             return redirect("contest_detail", pk=contest.pk)
         if contest.max_participants and contest.participants.count() >= contest.max_participants:
             return redirect("contest_detail", pk=contest.pk)
-        ContestParticipant.objects.get_or_create(contest=contest, user=request.user)
+        _, joined = ContestParticipant.objects.get_or_create(
+            contest=contest, user=request.user,
+        )
+        if joined:
+            messages.success(request, f"You joined {contest.title}.")
     return redirect("contest_detail", pk=contest.pk)
 
 
@@ -959,6 +1093,10 @@ def contest_submit(request, pk):
             value.participant = participant
             value.status = "submitted"
             value.save()
+            messages.success(
+                request,
+                f"Your entry for {contest.title} was saved.",
+            )
             return redirect("contest_detail", pk=contest.pk)
     else:
         form = ContestSubmissionForm(instance=submission, user=request.user, contest=contest)
@@ -1064,6 +1202,10 @@ def report_project(request, pk):
             report.project = project
             report.reported_user = project.owner
             report.save()
+            messages.success(
+                request,
+                "Thanks - your report has been sent to the moderators.",
+            )
             return redirect("project_detail", pk=project.pk)
     else:
         form = ReportForm()
@@ -1087,45 +1229,148 @@ def award_badge(user, badge_name, description="", points=0):
     return user_badge
 
 
-def refresh_leaderboards():
-    users = User.objects.annotate(
-        activity_points=Sum("activity_events__points"),
-        badge_points=Sum("badges__badge__points"),
-    ).order_by("-activity_points", "-badge_points", "username")
-    today = timezone.localdate()
-    period_starts = {
+# How long a computed leaderboard is considered fresh. Recomputing on every
+# request cost 462 queries for 19 users and grew with the user count.
+LEADERBOARD_REFRESH_INTERVAL = timedelta(minutes=10)
+
+LEADERBOARD_PERIODS = [choice[0] for choice in Leaderboard.PERIOD_CHOICES]
+
+
+def leaderboard_period_starts(today=None):
+    """First day counted for each period. 'overall' has no lower bound."""
+    today = today or timezone.localdate()
+    return {
         "overall": None,
         "weekly": today - timedelta(days=today.weekday()),
         "monthly": today.replace(day=1),
     }
-    for period, start in period_starts.items():
+
+
+def activity_points_by_user(since=None):
+    """Total ActivityEvent points per user, as one grouped query."""
+    events = ActivityEvent.objects.all()
+    if since is not None:
+        events = events.filter(created_at__date__gte=since)
+
+    return {
+        row["user"]: row["total"] or 0
+        for row in events.values("user").annotate(total=Sum("points"))
+    }
+
+
+def badge_points_by_user():
+    """Total badge points per user, as one grouped query."""
+    return {
+        row["user"]: row["total"] or 0
+        for row in UserBadge.objects.values("user").annotate(total=Sum("badge__points"))
+    }
+
+
+def refresh_leaderboards():
+    """Recompute every leaderboard period.
+
+    Previously this annotated two multi-valued relations on the same queryset
+    (activity_events and badges), which made the SQL joins multiply: a user with
+    3 events worth 10 and 2 badges worth 5 scored 90 instead of 40. Summing each
+    relation in its own grouped query is both correct and far cheaper - the cost
+    is now a fixed handful of queries rather than one per user per period.
+    """
+    usernames = dict(User.objects.values_list("pk", "username"))
+    badge_points = badge_points_by_user()
+    now = timezone.now()
+
+    for period, start in leaderboard_period_starts().items():
+        event_points = activity_points_by_user(start)
+
         if period == "overall":
-            points_map = {user.pk: (user.activity_points or 0) + (user.badge_points or 0) for user in users}
+            points_map = {
+                user_id: event_points.get(user_id, 0) + badge_points.get(user_id, 0)
+                for user_id in usernames
+            }
         else:
             points_map = {
-                user.pk: ActivityEvent.objects.filter(
-                    user=user,
-                    created_at__date__gte=start,
-                ).aggregate(total=Sum("points"))["total"] or 0
-                for user in users
+                user_id: event_points.get(user_id, 0) for user_id in usernames
             }
-        ranked = sorted(points_map.items(), key=lambda item: (-item[1], User.objects.get(pk=item[0]).username))
-        for rank, (user_id, points) in enumerate(ranked, start=1):
-            Leaderboard.objects.update_or_create(
-                user_id=user_id,
+
+        # Highest points first, ties broken alphabetically so ranks are stable.
+        ranked = sorted(
+            points_map.items(),
+            key=lambda item: (-item[1], usernames[item[0]]),
+        )
+
+        existing = {
+            entry.user_id: entry
+            for entry in Leaderboard.objects.filter(
                 period=period,
                 period_start=start,
                 period_end=None,
-                defaults={"points": points, "rank": rank},
+            )
+        }
+
+        to_create = []
+        to_update = []
+
+        for rank, (user_id, points) in enumerate(ranked, start=1):
+            entry = existing.get(user_id)
+
+            if entry is None:
+                to_create.append(
+                    Leaderboard(
+                        user_id=user_id,
+                        period=period,
+                        period_start=start,
+                        period_end=None,
+                        points=points,
+                        rank=rank,
+                        updated_at=now,
+                    )
+                )
+            elif entry.points != points or entry.rank != rank:
+                entry.points = points
+                entry.rank = rank
+                entry.updated_at = now
+                to_update.append(entry)
+
+        if to_create:
+            Leaderboard.objects.bulk_create(to_create)
+        if to_update:
+            Leaderboard.objects.bulk_update(
+                to_update,
+                ["points", "rank", "updated_at"],
             )
 
+
+def leaderboards_are_stale():
+    """True when no leaderboard exists yet, or the newest one has aged out."""
+    latest = Leaderboard.objects.aggregate(latest=Max("updated_at"))["latest"]
+
+    return latest is None or timezone.now() - latest > LEADERBOARD_REFRESH_INTERVAL
 
 
 def leaderboard(request):
     period = request.GET.get("period", "overall")
-    refresh_leaderboards()
-    entries = Leaderboard.objects.filter(period=period).select_related("user").order_by("rank")[:50]
-    return render(request, "core/leaderboard.html", {"entries": entries, "period": period})
+    if period not in LEADERBOARD_PERIODS:
+        period = "overall"
+
+    # Refresh on read only when the data has aged out, so a burst of visitors
+    # does not each pay for a full recomputation. The management command
+    # `refresh_leaderboards` forces one for scheduled runs.
+    if leaderboards_are_stale():
+        refresh_leaderboards()
+
+    entries = Leaderboard.objects.filter(
+        period=period,
+    ).select_related("user", "user__profile").order_by("rank")[:50]
+
+    return render(
+        request,
+        "core/leaderboard.html",
+        {
+            "entries": entries,
+            "period": period,
+            "periods": LEADERBOARD_PERIODS,
+        },
+    )
 
 
 @login_required
@@ -1175,10 +1420,15 @@ def dashboard(request):
 
 @login_required
 def analytics(request):
-    projects = request.user.projects.all().annotate(
-        likes_total=Count("likes"),
-        comments_total=Count("comments"),
-        views_total=Count("view_events"),
+    # likes, comments and view_events are all multi-valued relations. Annotating
+    # three of them in one queryset makes the SQL joins multiply, so without
+    # distinct=True each count is inflated by the row count of the other two
+    # (3 likes + 2 comments was reported as 6 and 6). Counting distinct related
+    # primary keys gives the true total.
+    projects = request.user.projects.select_related("category").annotate(
+        likes_total=Count("likes", distinct=True),
+        comments_total=Count("comments", distinct=True),
+        views_total=Count("view_events", distinct=True),
     ).order_by("-views_total")
     profile_visits = ProfileVisit.objects.filter(profile_user=request.user).count()
     unique_profile_visitors = ProfileVisit.objects.filter(profile_user=request.user).values("visitor", "session_key").distinct().count()

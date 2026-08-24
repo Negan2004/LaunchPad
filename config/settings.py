@@ -58,7 +58,7 @@ LOGIN_URL = '/login/'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'core' / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -119,6 +119,19 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 
 USE_TZ = True
+
+
+# Default primary key field type
+# https://docs.djangoproject.com/en/6.1/ref/settings/#default-auto-field
+#
+# Every existing migration (0001-0008) declares BigAutoField and every core_*
+# table in PostgreSQL already has a bigint primary key. Without this setting
+# Django resolves the models to AutoField, so makemigrations wants to generate
+# an AlterField shrinking all 22 primary keys to 32-bit integers. Declaring it
+# here makes the model state agree with the migrations and the database; it is
+# a no-op against existing data.
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 # Static files (CSS, JavaScript, Images)

@@ -17,9 +17,10 @@
 
         <form method="post">
             {% csrf_token %}
+            {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
             <p>
                 <label for="id_username">Username</label>
-                <input id="id_username" type="text" name="username" autocomplete="username" required>
+                <input id="id_username" type="text" name="username" value="{{ username|default:'' }}" autocomplete="username" required>
             </p>
             <p>
                 <label for="id_password">Password</label>

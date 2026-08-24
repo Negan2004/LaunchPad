@@ -17,7 +17,7 @@
     <div class="bookmark-list">
         {% for bookmark in bookmarks %}
             <article class="bookmark-row card">
-                {% with primary_image=bookmark.project.images.first %}
+                {% with primary_image=bookmark.project.images.all|first %}
                     <a class="bookmark-row__image" href="{% url 'project_detail' bookmark.project.pk %}">
                         {% if primary_image %}
                             <img src="{{ primary_image.image.url }}" alt="{{ primary_image.caption|default:bookmark.project.title }}">

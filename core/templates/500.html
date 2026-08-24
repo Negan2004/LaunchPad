@@ -1,0 +1,90 @@
+{% comment %}
+Deliberately standalone.
+
+Django renders 500.html with an empty context and without context processors,
+and a 500 is often caused by the database being unavailable. base.html reads
+user.profile.avatar and the navigation runs launchpad_context, both of which
+query the database - extending it here would raise a second exception inside
+the error handler. Styles are inlined for the same reason: the stylesheet may
+be served by the same process that just failed.
+{% endcomment %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Something went wrong — LaunchPad</title>
+    <style>
+        :root {
+            --ink-950: #08111f;
+            --slate-600: #617089;
+            --paper: #f7f9fc;
+            --surface: #ffffff;
+            --blue-600: #2563eb;
+            --mint-500: #0f9b88;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 2rem;
+            background: var(--paper);
+            color: var(--ink-950);
+            font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+            line-height: 1.6;
+        }
+        .card {
+            max-width: 32rem;
+            padding: clamp(1.75rem, 5vw, 3rem);
+            border-radius: 1.35rem;
+            background: var(--surface);
+            box-shadow: 0 22px 50px rgba(8, 17, 31, .13);
+        }
+        .brand {
+            display: inline-block;
+            margin-bottom: 1.5rem;
+            color: var(--ink-950);
+            font-weight: 800;
+            letter-spacing: .13em;
+            text-decoration: none;
+            font-size: .8rem;
+        }
+        .eyebrow {
+            margin: 0 0 .35rem;
+            color: var(--mint-500);
+            font-size: .73rem;
+            font-weight: 800;
+            letter-spacing: .13em;
+            text-transform: uppercase;
+        }
+        h1 {
+            margin: 0 0 .7rem;
+            font-size: clamp(1.6rem, 4vw, 2.25rem);
+            line-height: 1.1;
+            letter-spacing: -.04em;
+        }
+        p { margin: 0 0 1.5rem; color: var(--slate-600); }
+        a.button {
+            display: inline-block;
+            padding: .7rem 1.2rem;
+            border-radius: .55rem;
+            background: var(--blue-600);
+            color: #fff;
+            font-weight: 600;
+            font-size: .95rem;
+            text-decoration: none;
+        }
+        a.button:focus-visible { outline: 3px solid var(--ink-950); outline-offset: 2px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <span class="brand">↗ LAUNCHPAD</span>
+        <p class="eyebrow">Server error</p>
+        <h1>Something went wrong on our side.</h1>
+        <p>This one is not your fault. The problem has been logged and nothing you submitted was lost. Try again in a moment.</p>
+        <a class="button" href="/">Back to home</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,8 @@
+{% comment %}
+Like / bookmark panel for a project.
+
+Rendered inline by project_detail and returned on its own by toggle_like and
+toggle_bookmark when the request came from htmx, which swaps this whole element
+in place. The forms keep their method/action, so with JavaScript unavailable
+they submit normally and the view redirects as before.
+{% endcomment %}<div class="engagement-card card" id="engagement-card"><span class="engagement-number">{{ like_count }}</span><div class="engagement-label">Signals of appreciation</div><div class="engagement-metrics"><span>{{ view_count }} views</span><span>{{ comment_count }} comments</span></div><div class="stacked-actions">{% if user.is_authenticated %}<form method="post" action="{% url 'toggle_like' project.pk %}" hx-post="{% url 'toggle_like' project.pk %}" hx-target="#engagement-card" hx-swap="outerHTML" hx-disabled-elt="find button">{% csrf_token %}<button type="submit" class="{% if user_has_liked %}button--secondary{% endif %}" aria-pressed="{% if user_has_liked %}true{% else %}false{% endif %}">{% if user_has_liked %}Unlike project{% else %}Appreciate project{% endif %}</button></form><form method="post" action="{% url 'toggle_bookmark' project.pk %}" hx-post="{% url 'toggle_bookmark' project.pk %}" hx-target="#engagement-card" hx-swap="outerHTML" hx-disabled-elt="find button">{% csrf_token %}<button type="submit" class="{% if user_has_bookmarked %}button--secondary{% endif %}" aria-pressed="{% if user_has_bookmarked %}true{% else %}false{% endif %}">{% if user_has_bookmarked %}Remove from saved{% else %}Save for later{% endif %}</button></form>{% else %}<a class="button" href="{% url 'login' %}?next={{ request.path|urlencode }}">Log in to engage</a>{% endif %}</div></div>
