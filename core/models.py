@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
 
+from .validators import validate_document_upload
+
 class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
@@ -63,7 +65,14 @@ class Project(models.Model):
     demo_url = models.URLField(blank=True)
     repository_url = models.URLField(blank=True)
     documentation_url = models.URLField(blank=True)
-    documentation_file = models.FileField(upload_to='documentation/', blank=True, null=True)
+    documentation_file = models.FileField(
+        upload_to='documentation/',
+        blank=True,
+        null=True,
+        # On the model rather than the form so the admin and any future
+        # code path are covered too.
+        validators=[validate_document_upload],
+    )
 
     visibility = models.CharField(
         max_length=10,

@@ -8,3 +8,6 @@ __pycache__/
 # The project's own committed media (media/avatars/*.jpg etc.) is unaffected.
 media/**/seed_*
 .seed_manifest.json
+
+# collectstatic output (build artifact, not source)
+staticfiles/
