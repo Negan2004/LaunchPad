@@ -172,6 +172,22 @@ button, input, select, textarea { font: inherit; }
 .identity-menu__panel a { padding: .6rem .65rem; border-radius: var(--radius-sm); color: #e4edf8; font-size: .88rem; font-weight: 700; text-decoration: none; }
 .identity-menu__panel a:hover { background: rgba(255, 255, 255, .09); color: white; }
 .identity-menu__panel .identity-menu__signout { margin-top: .35rem; border-top: 1px solid rgba(194, 215, 238, .15); border-radius: 0; color: #f5c4d1; }
+/* Sign-out is a POST form, so the control is a button. Match the sibling links exactly. */
+.identity-menu__signout-form { display: contents; }
+/* The global `button` rule is inline-flex + justify-content:center + min-height,
+   so text-align alone would not left-align this. Match the sibling links. */
+.identity-menu__panel button.identity-menu__signout {
+    display: block; width: 100%; min-height: 0;
+    padding: .6rem .65rem; margin-top: .35rem;
+    border: 0; border-top: 1px solid rgba(194, 215, 238, .15); border-radius: 0;
+    background: none; box-shadow: none;
+    font-size: .88rem; font-weight: 700; line-height: 1.2;
+    text-align: left; color: #f5c4d1; cursor: pointer;
+}
+.identity-menu__panel button.identity-menu__signout:hover {
+    background: rgba(255, 255, 255, .09); color: #ffd9e2;
+    box-shadow: none; transform: none; border-color: rgba(194, 215, 238, .15);
+}
 
 .page-shell { width: min(1180px, calc(100% - 3rem)); margin: 0 auto; padding: 3.4rem 0 5rem; }
 

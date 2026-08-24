@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseNotAllowed, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.db import transaction
-from django.db.models import Q, Count, Max, Sum
+from django.db.models import Q, Count, F, Max, Sum
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.contrib.auth.models import User
@@ -74,6 +74,54 @@ def record_activity(*, user, event_type, points=0, actor=None, project=None, con
         contest=contest,
         metadata=metadata or {},
     )
+
+
+def revoke_activity(*, user, event_type, actor=None, project=None):
+    """Remove one ledger entry for an action that has just been undone.
+
+    Points are never subtracted by hand. The ActivityEvent ledger is the source
+    of truth and refresh_leaderboards() recomputes every total from it, so
+    deleting the row is what removes the points.
+
+    Exactly one row is deleted - the most recent match - so undoing one action
+    cannot take away points earned from a different one.
+    """
+    event = ActivityEvent.objects.filter(
+        user=user,
+        actor=actor,
+        event_type=event_type,
+        project=project,
+    ).order_by("-created_at", "-id").first()
+
+    if event is None:
+        return False
+
+    event.delete()
+    return True
+
+
+def record_project_published(request, project):
+    """Record the one-off reward for a project entering the published state.
+
+    Called from both create_project and edit_project so a project published by
+    editing a draft earns exactly what one published at creation does - and,
+    because both go through here, never twice.
+    """
+    record_activity(
+        user=request.user,
+        actor=request.user,
+        project=project,
+        event_type="project_published",
+        points=10,
+    )
+
+    if request.user.projects.filter(status="published").count() == 1:
+        award_badge(
+            request.user,
+            "First Project",
+            "Published your first LaunchPad project.",
+            10,
+        )
 
 
 def save_project_images(project, image_forms):
@@ -207,13 +255,32 @@ def project_detail(request, pk):
 
     if not request.session.session_key:
         request.session.save()
-    ProjectView.objects.create(
-        project=project,
-        visitor=request.user if request.user.is_authenticated else None,
-        session_key=request.session.session_key or "",
-    )
-    Project.objects.filter(pk=project.pk).update(views_count=project.views_count + 1)
-    project.views_count += 1
+    session_key = request.session.session_key or ""
+    visitor = request.user if request.user.is_authenticated else None
+
+    # One view per viewer per project. A signed-in viewer is identified by the
+    # account, so their count does not grow with each new session; an anonymous
+    # viewer is identified by the session, which is what session_key is for and
+    # matches how analytics already defines a unique visitor.
+    if visitor is not None:
+        _, is_new_view = ProjectView.objects.get_or_create(
+            project=project,
+            visitor=visitor,
+            defaults={"session_key": session_key},
+        )
+    else:
+        _, is_new_view = ProjectView.objects.get_or_create(
+            project=project,
+            visitor=None,
+            session_key=session_key,
+        )
+
+    if is_new_view:
+        # F() so concurrent readers cannot lose an increment.
+        Project.objects.filter(pk=project.pk).update(
+            views_count=F("views_count") + 1
+        )
+        project.views_count += 1
 
     comments = Comment.objects.filter(
         project=project,
@@ -375,6 +442,17 @@ def delete_comment(request, pk):
 
     if request.method == "POST":
         project_pk = comment.project.pk
+
+        # Only top-level comments earn points - add_reply records no activity -
+        # so only their removal revokes any.
+        if comment.parent_id is None:
+            revoke_activity(
+                user=comment.project.owner,
+                actor=comment.user,
+                project=comment.project,
+                event_type="comment_received",
+            )
+
         comment.delete()
         messages.info(request, "Comment deleted.")
 
@@ -438,6 +516,12 @@ def toggle_like(request, pk):
 
     if like:
         like.delete()
+        revoke_activity(
+            user=project.owner,
+            actor=request.user,
+            project=project,
+            event_type="like_received",
+        )
         if not is_htmx(request):
             messages.info(request, "Like removed.")
     else:
@@ -656,9 +740,7 @@ def create_project(request):
             save_project_images(project, image_forms)
             messages.success(request, f"'{project.title}' was created.")
             if project.status == "published":
-                record_activity(user=request.user, actor=request.user, project=project, event_type="project_published", points=10)
-                if request.user.projects.filter(status="published").count() == 1:
-                    award_badge(request.user, "First Project", "Published your first LaunchPad project.", 10)
+                record_project_published(request, project)
 
             return redirect(
                 "project_detail",
@@ -685,6 +767,10 @@ def edit_project(request, pk):
         pk=pk,
         owner=request.user
     )
+    # Captured before the form binds: ProjectForm(instance=project) writes
+    # cleaned_data onto the instance during validation, so reading it later
+    # would report the new status, not the previous one.
+    was_published = project.status == "published"
 
     if request.method == "POST":
         form = ProjectForm(
@@ -702,6 +788,13 @@ def edit_project(request, pk):
         ):
             form.save()
             save_project_images(project, image_forms)
+
+            # Only a genuine transition into published earns the reward.
+            # published -> published, published -> draft and draft -> draft all
+            # record nothing.
+            if not was_published and project.status == "published":
+                record_project_published(request, project)
+
             messages.success(request, f"'{project.title}' was updated.")
 
             return redirect(
@@ -859,6 +952,11 @@ def toggle_follow(request, username):
 
     if follow:
         follow.delete()
+        revoke_activity(
+            user=target_user,
+            actor=request.user,
+            event_type="follow_received",
+        )
         if not is_htmx(request):
             messages.info(request, f"You no longer follow {target_user.username}.")
     else:
@@ -1056,7 +1154,14 @@ def login_view(request):
 
 
 def logout_view(request):
+    # POST only: a GET logout can be triggered by any third-party page with an
+    # <img> tag, and by link prefetchers. Django's own LogoutView has been
+    # POST-only since 4.1.
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
     logout(request)
+    messages.info(request, "You have been signed out.")
 
     return redirect("home")
 
@@ -1214,6 +1319,21 @@ def certificate_detail(request, pk):
 @login_required
 def report_project(request, pk):
     project = get_accessible_project(request, pk)
+
+    # A reporter gets one live report per project. "open" and "reviewing" are
+    # the unresolved statuses; once moderators resolve or dismiss one, the same
+    # user may raise the issue again.
+    if Report.objects.filter(
+        reporter=request.user,
+        project=project,
+        status__in=["open", "reviewing"],
+    ).exists():
+        messages.info(
+            request,
+            "You have already reported this project. Moderators are looking at it.",
+        )
+        return redirect("project_detail", pk=project.pk)
+
     if request.method == "POST":
         form = ReportForm(request.POST)
         if form.is_valid():

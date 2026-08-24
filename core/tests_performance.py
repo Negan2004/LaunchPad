@@ -379,7 +379,7 @@ class ScaleRegressionTests(TestCase):
             follower = User.objects.create_user(
                 f"scale-follower-{index}", password="pw-perf-1"
             )
-            Profile.objects.create(user=follower, display_name=f"Person {index}")
+            Profile.objects.filter(user=follower).update(display_name=f"Person {index}")
             Follow.objects.create(follower=follower, following=self.person)
 
     def test_followers_list_does_not_scale_queries_with_follower_count(self):
@@ -411,7 +411,7 @@ class ScaleRegressionTests(TestCase):
             target = User.objects.create_user(
                 f"scale-followed-{index}", password="pw-perf-1"
             )
-            Profile.objects.create(user=target, display_name=f"Target {index}")
+            Profile.objects.filter(user=target).update(display_name=f"Target {index}")
             Follow.objects.create(follower=self.person, following=target)
 
         url = reverse("following_list", args=[self.person.username])

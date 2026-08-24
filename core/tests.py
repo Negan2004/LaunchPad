@@ -83,13 +83,14 @@ class MediaAndProjectImageTests(TestCase):
         self.assertContains(self.client.get(reverse("home")), profile.avatar.url)
 
     def test_missing_avatar_and_null_profile_values_use_safe_fallbacks(self):
-        profile = Profile.objects.create(
-            user=self.owner,
-            avatar="avatars/missing-avatar.png",
-            bio="null",
-            skills="NULL",
-            portfolio_url="",
-        )
+        # The post_save signal on User already created this profile, so update
+        # it rather than creating a second one.
+        profile = Profile.objects.get(user=self.owner)
+        profile.avatar = "avatars/missing-avatar.png"
+        profile.bio = "null"
+        profile.skills = "NULL"
+        profile.portfolio_url = ""
+        profile.save()
 
         form = ProfileForm(instance=profile)
         self.assertEqual(form.initial["bio"], "")
@@ -276,7 +277,9 @@ class MediaAndProjectImageTests(TestCase):
         for route in authenticated_routes:
             self.assertEqual(self.client.get(route).status_code, 200)
 
-        self.assertRedirects(self.client.get(reverse("logout")), reverse("home"))
+        # Logout is POST-only: a GET must not end the session.
+        self.assertEqual(self.client.get(reverse("logout")).status_code, 405)
+        self.assertRedirects(self.client.post(reverse("logout")), reverse("home"))
 
     def test_collection_isolation_is_preserved(self):
         project = Project.objects.create(

@@ -255,6 +255,11 @@ class Notification(models.Model):
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        # The inbox view slices [:100]; without a deterministic order those are
+        # an arbitrary 100 rows rather than the newest 100.
+        ordering = ["-created_at", "-id"]
+
     def __str__(self):
         return f"{self.recipient.username} - {self.notification_type}"
 
