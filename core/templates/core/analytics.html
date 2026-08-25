@@ -1,3 +1,67 @@
 {% extends "core/base.html" %}
 {% block title %}Analytics — LaunchPad{% endblock %}
-{% block content %}<header class="page-intro"><div class="page-intro__copy"><p class="eyebrow">Personal analytics</p><h1>Understand your reach.</h1><p class="lede">See how people discover and engage with the work you share.</p></div></header><section class="stats-grid"><article class="stat-card"><span>Profile visits</span><strong>{{ profile_visits }}</strong><small>{{ unique_profile_visitors }} unique visitors</small></article><article class="stat-card"><span>Followers</span><strong>{{ user.followers.count }}</strong><small>current network</small></article><article class="stat-card"><span>Projects</span><strong>{{ projects|length }}</strong><small>tracked projects</small></article></section><section class="panel"><div class="section-heading"><div><p class="eyebrow">Project performance</p><h2>What is getting attention?</h2></div></div><div class="analytics-table">{% for project in projects %}<div class="analytics-row"><a href="{% url 'project_detail' project.pk %}"><strong>{{ project.title }}</strong></a><span>{{ project.views_total }} views</span><span>{{ project.likes_total }} likes</span><span>{{ project.comments_total }} comments</span></div>{% empty %}<p class="muted">Publish a project to start collecting analytics.</p>{% endfor %}</div></section>{% endblock %}
+{% block content %}
+<header class="page-head">
+    <div class="page-head__text">
+        <p class="page-head__eyebrow">Personal analytics</p>
+        <h1 class="page-head__title">Understand your reach.</h1>
+        <p class="page-head__lede">See how people discover and engage with the work you share.</p>
+    </div>
+    <div class="page-head__actions">
+        <a class="editorial-button editorial-button--quiet" href="{% url 'dashboard' %}">Back to dashboard</a>
+    </div>
+</header>
+
+<section class="summary summary--wide">
+    <div class="summary__figures summary__figures--row">
+        <div class="summary__figure">
+            <span class="summary__value">{{ profile_visits }}</span>
+            <span class="summary__label">Profile visits</span>
+        </div>
+        <div class="summary__figure">
+            <span class="summary__value">{{ unique_profile_visitors }}</span>
+            <span class="summary__label">Unique visitors</span>
+        </div>
+        <div class="summary__figure">
+            <span class="summary__value">{{ user.followers.count }}</span>
+            <span class="summary__label">Followers</span>
+        </div>
+        <div class="summary__figure">
+            <span class="summary__value summary__value--accent">{{ projects|length }}</span>
+            <span class="summary__label">Tracked projects</span>
+        </div>
+    </div>
+</section>
+
+<section class="home-section">
+    {% include "core/partials/section_header.html" with eyebrow="Project performance" heading="What is getting attention?" %}
+    {% if projects %}
+        <div class="table-scroll">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Project</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="data-table__number">Views</th>
+                        <th scope="col" class="data-table__number">Likes</th>
+                        <th scope="col" class="data-table__number">Comments</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for project in projects %}
+                        <tr>
+                            <th scope="row"><a href="{% url 'project_detail' project.pk %}">{{ project.title }}</a></th>
+                            <td>{{ project.get_status_display }}</td>
+                            <td class="data-table__number">{{ project.views_total }}</td>
+                            <td class="data-table__number">{{ project.likes_total }}</td>
+                            <td class="data-table__number">{{ project.comments_total }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="section-empty">Publish a project to start collecting analytics.</p>
+    {% endif %}
+</section>
+{% endblock %}

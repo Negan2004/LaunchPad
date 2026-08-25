@@ -39,3 +39,13 @@ def split_commas(value):
         return []
 
     return [part.strip() for part in str(value).split(",") if part.strip()]
+
+
+@register.filter
+def reading_time(value):
+    """Minutes to read the given text, at 200 words per minute."""
+    if not value:
+        return 1
+
+    words = len(str(value).split())
+    return max(1, round(words / 200))

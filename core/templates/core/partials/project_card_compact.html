@@ -1,0 +1,19 @@
+{% comment %}
+Compact project card.
+
+The Discover card's smaller sibling, for places that list projects beside other
+content: the front page, bookmarks, collections and profiles. Reads only fields
+those views already select, and reuses the same media treatment (including the
+dark code panel for projects without an image).
+
+    {% include "core/partials/project_card_compact.html" with project=project %}
+{% endcomment %}<article class="compact-card">
+    {% include "core/partials/project_card_media.html" with media_modifier="article-card__media--wide" %}
+    <h3 class="compact-card__title"><a href="{% url 'project_detail' project.pk %}">{{ project.title }}</a></h3>
+    <p class="compact-card__note">{% if project.short_description %}{{ project.short_description }}{% else %}{{ project.description|truncatewords:16 }}{% endif %}</p>
+    <p class="compact-card__foot">
+        <a href="{% url 'public_profile' project.owner.username %}">by {{ project.owner.username }}</a>
+        <span class="meta-dot" aria-hidden="true">&bull;</span>
+        <span>{{ project.category }}</span>
+    </p>
+</article>

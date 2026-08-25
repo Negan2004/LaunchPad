@@ -1,3 +1,152 @@
 {% extends "core/base.html" %}
+{% load profile_extras %}
 {% block title %}Dashboard — LaunchPad{% endblock %}
-{% block content %}<header class="page-intro"><div class="page-intro__copy"><p class="eyebrow">Your launch space</p><h1>Keep your work in motion.</h1><p class="lede">A focused workspace for your projects, connections, contests, and progress.</p></div><a class="button" href="{% url 'create_project' %}">New project</a></header><section class="stats-grid"><article class="stat-card"><span>Profile completion</span><strong>{{ completion }}%</strong><a href="{% url 'edit_profile' %}">Improve profile →</a></article><article class="stat-card"><span>Projects</span><strong>{{ project_count }}</strong><small>{{ published_count }} published</small></article><article class="stat-card"><span>Network</span><strong>{{ followers_count }}</strong><small>{{ following_count }} following</small></article><article class="stat-card"><span>Reach</span><strong>{{ view_count }}</strong><small>{{ like_count }} likes · {{ comment_count }} comments</small></article><article class="stat-card"><span>Contests</span><strong>{{ participations }}</strong><small>participations</small></article><article class="stat-card"><span>Notifications</span><strong>{{ unread_count }}</strong><a href="{% url 'notifications' %}">Open inbox →</a></article></section><div class="dashboard-grid"><section class="panel"><div class="section-heading"><div><p class="eyebrow">Activity</p><h2>Recent momentum</h2></div><a class="text-link" href="{% url 'analytics' %}">View analytics →</a></div>{% for activity in activities %}<div class="activity-row"><span class="activity-dot"></span><div><strong>{{ activity.get_event_type_display }}</strong><p class="muted">{{ activity.created_at|date:"M j, Y · g:i A" }}{% if activity.project %} · {{ activity.project.title }}{% endif %}</p></div><span class="badge">+{{ activity.points }} pts</span></div>{% empty %}<p class="muted">Your activity will appear here as you publish, connect, and participate.</p>{% endfor %}</section><aside class="panel"><div class="section-heading"><div><p class="eyebrow">Recognition</p><h2>Your badges</h2></div><a class="text-link" href="{% url 'leaderboard' %}">Leaderboard →</a></div><div class="badge-wall">{% for user_badge in badges %}<div class="recognition-card"><span class="badge">{{ user_badge.badge.name }}</span><p>{{ user_badge.badge.description }}</p></div>{% empty %}<p class="muted">Earn badges by contributing meaningful work.</p>{% endfor %}</div></aside></div>{% endblock %}
+{% block content %}
+<div class="workspace">
+    <aside class="workspace__nav" aria-label="Workspace">
+        <div class="workspace__identity">
+            {% include "core/partials/avatar.html" with profile_user=user size="lg" %}
+            <span class="workspace__identity-text">
+                <span class="workspace__title">Developer dashboard</span>
+                <span class="workspace__subtitle">Manage your work</span>
+            </span>
+        </div>
+        <a class="editorial-button workspace__cta" href="{% url 'create_project' %}">New project</a>
+        <nav class="workspace__links">
+            <a class="workspace__link workspace__link--current" href="{% url 'dashboard' %}" aria-current="page">Dashboard</a>
+            <a class="workspace__link" href="{% url 'public_profile' user.username %}">My projects</a>
+            <a class="workspace__link" href="{% url 'analytics' %}">Analytics</a>
+            <a class="workspace__link" href="{% url 'my_bookmarks' %}">Saved work</a>
+            <a class="workspace__link" href="{% url 'my_collections' %}">Collections</a>
+            <a class="workspace__link" href="{% url 'notifications' %}">Notifications{% if unread_count %} ({{ unread_count }}){% endif %}</a>
+        </nav>
+        <div class="workspace__foot">
+            <a class="workspace__link" href="{% url 'edit_profile' %}">Profile studio</a>
+            <a class="workspace__link" href="{% url 'contests' %}">Contests</a>
+            {% if user.is_staff %}<a class="workspace__link" href="{% url 'manage_contests' %}">Manage contests</a>{% endif %}
+        </div>
+    </aside>
+
+    <div class="workspace__body">
+        <div class="workspace__main">
+            <header class="workspace__header">
+                <h1 class="workspace__heading">Activity log</h1>
+                <p class="workspace__lede">Latest updates from your creative workspace.</p>
+            </header>
+
+            <section class="workspace__section">
+                <div class="rule-head">
+                    <h2 class="rule-head__title">Recent projects</h2>
+                    <a class="rule-head__link" href="{% url 'public_profile' user.username %}">View all</a>
+                </div>
+                {% if recent_projects %}
+                    <ul class="record-list">
+                        {% for project in recent_projects %}
+                            <li class="record">
+                                <div class="record__text">
+                                    <h3 class="record__title"><a href="{% url 'project_detail' project.pk %}">{{ project.title }}</a></h3>
+                                    <p class="record__note">{% if project.short_description %}{{ project.short_description }}{% else %}{{ project.description|truncatewords:20 }}{% endif %}</p>
+                                </div>
+                                <dl class="record__meta">
+                                    <div><dt>Status</dt><dd class="record__status">{{ project.get_status_display }}</dd></div>
+                                    <div><dt>Visibility</dt><dd>{{ project.get_visibility_display }}</dd></div>
+                                    <div><dt>Updated</dt><dd>{{ project.updated_at|timesince|split_commas|first }} ago</dd></div>
+                                    <div><dt>Views</dt><dd>{{ project.views_count }}</dd></div>
+                                </dl>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="section-empty">You have not created a project yet. <a href="{% url 'create_project' %}">Start one</a>.</p>
+                {% endif %}
+            </section>
+
+            <section class="workspace__section">
+                <div class="rule-head">
+                    <h2 class="rule-head__title">Contest entries</h2>
+                    <a class="rule-head__link" href="{% url 'contests' %}">Browse contests</a>
+                </div>
+                {% if contest_entries %}
+                    <ul class="entry-list">
+                        {% for entry in contest_entries %}
+                            <li class="entry-card">
+                                <span class="entry-card__eyebrow">{{ entry.contest.get_status_display }}</span>
+                                <h3 class="entry-card__title"><a href="{% url 'contest_detail' entry.contest.pk %}">{{ entry.contest.title }}</a></h3>
+                                <p class="entry-card__meta">Submissions close {{ entry.contest.submission_deadline|date:"M j, Y" }}</p>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="section-empty">You have not entered a contest yet.</p>
+                {% endif %}
+            </section>
+
+            {% if badges %}
+                <section class="workspace__section">
+                    <div class="rule-head">
+                        <h2 class="rule-head__title">Badges</h2>
+                    </div>
+                    <ul class="badge-list">
+                        {% for user_badge in badges %}
+                            <li class="badge-list__item">
+                                <span class="badge-list__name">{{ user_badge.badge.name }}</span>
+                                <span class="badge-list__meta">{{ user_badge.badge.description }}</span>
+                                <span class="badge-list__points">{{ user_badge.badge.points }} pts</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </section>
+            {% endif %}
+        </div>
+
+        <aside class="workspace__aside">
+            <section class="panel-card">
+                <div class="panel-card__head">
+                    <h2 class="panel-card__title">Notifications</h2>
+                    <a class="rule-head__link" href="{% url 'notifications' %}">Open inbox</a>
+                </div>
+                {% if recent_notifications %}
+                    <ul class="notice-list">
+                        {% for notification in recent_notifications %}
+                            <li class="notice{% if not notification.is_read %} notice--unread{% endif %}">
+                                <span class="notice__title">{{ notification.notification_type|title }}</span>
+                                <span class="notice__text">{{ notification.message }}</span>
+                                <span class="notice__time">{{ notification.created_at|timesince|split_commas|first }} ago</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="section-empty">Nothing new right now.</p>
+                {% endif %}
+            </section>
+
+            <section class="summary">
+                <h2 class="aside-heading">Engagement summary</h2>
+                <div class="summary__figures">
+                    <div class="summary__figure">
+                        <span class="summary__value">{{ view_count }}</span>
+                        <span class="summary__label">Project views</span>
+                    </div>
+                    <div class="summary__figure">
+                        <span class="summary__value">{{ followers_count }}</span>
+                        <span class="summary__label">Followers</span>
+                    </div>
+                    <div class="summary__figure">
+                        <span class="summary__value summary__value--accent">{{ completion }}%</span>
+                        <span class="summary__label">Profile completion</span>
+                    </div>
+                </div>
+                <dl class="summary__rows">
+                    <div><dt>Projects</dt><dd>{{ project_count }} ({{ published_count }} published)</dd></div>
+                    <div><dt>Likes received</dt><dd>{{ like_count }}</dd></div>
+                    <div><dt>Comments received</dt><dd>{{ comment_count }}</dd></div>
+                    <div><dt>Following</dt><dd>{{ following_count }}</dd></div>
+                    <div><dt>Contests entered</dt><dd>{{ participations }}</dd></div>
+                </dl>
+            </section>
+
+            <a class="editorial-button editorial-button--quiet workspace__cta" href="{% url 'edit_profile' %}">Update profile</a>
+        </aside>
+    </div>
+</div>
+{% endblock %}

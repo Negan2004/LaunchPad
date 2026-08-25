@@ -1,26 +1,16 @@
-{% extends "core/base.html" %}
-
-{% block title %}Join LaunchPad{% endblock %}
-
+{% extends "core/base_auth.html" %}
+{% block title %}Create account — LaunchPad{% endblock %}
+{% block tab_register %} auth-tab--current{% endblock %}
 {% block content %}
+<h1 class="auth-title">Start with the work.</h1>
+<p class="auth-note">Build a focused public presence for the projects you want people to remember.</p>
 
-<section class="auth-page">
-    <div class="panel form-card auth-card">
-        <div class="auth-card__top">
-            <a class="auth-card__brand" href="{% url 'home' %}"><span aria-hidden="true">↗</span> LAUNCHPAD</a>
-            <p class="eyebrow">Create your space</p>
-            <h1>Start with the work.</h1>
-            <p class="lede">Build a focused public presence for the projects you want people to remember.</p>
-        </div>
+<form class="auth-form" method="post">
+    {% csrf_token %}
+    {% include "core/partials/form_errors.html" %}
+    {% for field in form %}{% include "core/partials/form_field.html" %}{% endfor %}
+    <button class="editorial-button auth-submit" type="submit">Create account</button>
+</form>
 
-        <form method="post">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit">Create account</button>
-        </form>
-
-        <p class="form-footer">Already building here? <a class="text-link" href="{% url 'login' %}">Log in</a>.</p>
-    </div>
-</section>
-
+<p class="auth-footer">Already building here? <a href="{% url 'login' %}">Sign in</a>.</p>
 {% endblock %}

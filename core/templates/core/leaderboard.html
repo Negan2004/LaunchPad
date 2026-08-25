@@ -1,3 +1,39 @@
 {% extends "core/base.html" %}
+{% load profile_extras %}
 {% block title %}Leaderboard — LaunchPad{% endblock %}
-{% block content %}<header class="page-intro"><div class="page-intro__copy"><p class="eyebrow">Recognition</p><h1>Leaderboard.</h1><p class="lede">Meaningful contribution compounds into visibility across the student community.</p></div></header><nav class="category-rail period-tabs" aria-label="Leaderboard periods"><a class="category-chip{% if period == 'overall' %} category-chip--active{% endif %}" href="?period=overall">Overall</a><a class="category-chip{% if period == 'monthly' %} category-chip--active{% endif %}" href="?period=monthly">Monthly</a><a class="category-chip{% if period == 'weekly' %} category-chip--active{% endif %}" href="?period=weekly">Weekly</a></nav><section class="panel leaderboard-list">{% for entry in entries %}<div class="leaderboard-row"><strong class="leaderboard-rank">{{ entry.rank }}</strong><div class="person-card__avatar">{{ entry.user.username|first|upper }}</div><div><h2>{% if entry.user.profile.display_name %}{{ entry.user.profile.display_name }}{% else %}{{ entry.user.username }}{% endif %}</h2><a class="muted" href="{% url 'public_profile' entry.user.username %}">@{{ entry.user.username }}</a></div><span class="leaderboard-points">{{ entry.points }} pts</span></div>{% empty %}<div class="empty-state"><div><h2>No rankings yet</h2><p>Points will appear as students publish and participate.</p></div></div>{% endfor %}</section>{% endblock %}
+{% block content %}
+<header class="page-head">
+    <div class="page-head__text">
+        <p class="page-head__eyebrow">Recognition</p>
+        <h1 class="page-head__title">Leaderboard.</h1>
+        <p class="page-head__lede">Meaningful contribution compounds into visibility across the student community.</p>
+    </div>
+    <nav class="editorial-tabs" aria-label="Leaderboard periods">
+        <a class="editorial-tab{% if period == 'overall' %} editorial-tab--current{% endif %}"{% if period == 'overall' %} aria-current="page"{% endif %} href="?period=overall">Overall</a>
+        <a class="editorial-tab{% if period == 'monthly' %} editorial-tab--current{% endif %}"{% if period == 'monthly' %} aria-current="page"{% endif %} href="?period=monthly">Monthly</a>
+        <a class="editorial-tab{% if period == 'weekly' %} editorial-tab--current{% endif %}"{% if period == 'weekly' %} aria-current="page"{% endif %} href="?period=weekly">Weekly</a>
+    </nav>
+</header>
+
+{% if entries %}
+    <ol class="standings">
+        {% for entry in entries %}
+            <li class="standings__row{% if entry.rank <= 3 %} standings__row--top{% endif %}">
+                <span class="standings__rank">{{ entry.rank }}</span>
+                {% include "core/partials/avatar.html" with profile_user=entry.user size="md" %}
+                <span class="standings__person">
+                    <a class="standings__name" href="{% url 'public_profile' entry.user.username %}">{{ entry.user.profile.display_name|clean_profile_text|default:entry.user.username }}</a>
+                    <span class="standings__handle">&#64;{{ entry.user.username }}</span>
+                </span>
+                <span class="standings__points">{{ entry.points }} <span>pts</span></span>
+            </li>
+        {% endfor %}
+    </ol>
+{% else %}
+    <div class="editorial-empty">
+        <h2>No rankings yet</h2>
+        <p>Points will appear as students publish work and take part in contests.</p>
+        <a class="editorial-button" href="{% url 'project_list' %}">Explore projects</a>
+    </div>
+{% endif %}
+{% endblock %}

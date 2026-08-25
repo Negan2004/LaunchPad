@@ -1,46 +1,38 @@
 {% extends "core/base.html" %}
-
 {% block title %}Collections — LaunchPad{% endblock %}
-
 {% block content %}
-
-<header class="page-intro">
-    <div class="page-intro__copy">
-        <p class="eyebrow">Research maps</p>
-        <h1>Arrange the work that matters.</h1>
-        <p class="lede">Collections turn saved projects into useful reference sets for your next decision.</p>
+<header class="page-head">
+    <div class="page-head__text">
+        <p class="page-head__eyebrow">Research maps</p>
+        <h1 class="page-head__title">Arrange the work that matters.</h1>
+        <p class="page-head__lede">Collections turn saved projects into useful reference sets for your next decision.</p>
     </div>
-    <a class="button" href="{% url 'create_collection' %}">Create collection</a>
+    <div class="page-head__actions">
+        <a class="editorial-button" href="{% url 'create_collection' %}">Create collection</a>
+        <a class="editorial-button editorial-button--quiet" href="{% url 'my_bookmarks' %}">Saved work</a>
+    </div>
 </header>
 
 {% if collections %}
-    <div class="collection-grid">
+    <ul class="collection-list">
         {% for collection in collections %}
-            <article class="collection-card card">
-                <span class="badge badge--saved">Private collection</span>
-                <h2 style="margin-top: .85rem;"><a href="{% url 'collection_detail' collection.pk %}">{{ collection.name }}</a></h2>
-                {% if collection.description %}
-                    <p class="muted">{{ collection.description }}</p>
-                {% else %}
-                    <p class="muted">A personal set of projects worth revisiting.</p>
-                {% endif %}
-                <p class="collection-card__count">{{ collection.bookmarks.count }} saved project{{ collection.bookmarks.count|pluralize }}</p>
-                <div class="collection-card__footer">
-                    <span class="muted">Updated {{ collection.updated_at|date:"M d, Y" }}</span>
-                    <a class="text-link" href="{% url 'collection_detail' collection.pk %}">Open collection</a>
-                </div>
-            </article>
+            <li class="collection-item">
+                <p class="collection-item__meta">
+                    <span>Private collection</span>
+                    <span class="meta-dot" aria-hidden="true">&bull;</span>
+                    <span>Updated {{ collection.updated_at|date:"M j, Y" }}</span>
+                </p>
+                <h2 class="collection-item__title"><a href="{% url 'collection_detail' collection.pk %}">{{ collection.name }}</a></h2>
+                <p class="collection-item__note">{% if collection.description %}{{ collection.description }}{% else %}A personal set of projects worth revisiting.{% endif %}</p>
+                <p class="collection-item__count">{{ collection.bookmark_total }} saved project{{ collection.bookmark_total|pluralize }}</p>
+            </li>
         {% endfor %}
-    </div>
+    </ul>
 {% else %}
-    <div class="empty-state">
-        <div>
-            <div class="empty-state__icon" aria-hidden="true">□</div>
-            <h2>No collections yet</h2>
-            <p>Group saved work by a problem, a technology, or a future build.</p>
-            <a class="button" href="{% url 'create_collection' %}">Create your first collection</a>
-        </div>
+    <div class="editorial-empty">
+        <h2>No collections yet</h2>
+        <p>Group saved projects around a question or a direction you are exploring.</p>
+        <a class="editorial-button" href="{% url 'create_collection' %}">Create your first collection</a>
     </div>
 {% endif %}
-
 {% endblock %}

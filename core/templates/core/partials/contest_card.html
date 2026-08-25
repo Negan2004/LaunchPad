@@ -1,0 +1,14 @@
+{% comment %}
+Contest card, used by the front page and the contests index.
+
+    {% include "core/partials/contest_card.html" with contest=contest %}
+{% endcomment %}<article class="contest-card">
+    <p class="contest-card__meta">
+        <span class="meta-chip meta-chip--{{ contest.status }}">{{ contest.get_status_display }}</span>
+        <span class="meta-dot" aria-hidden="true">&bull;</span>
+        <time datetime="{{ contest.submission_deadline|date:'c' }}">Submit by {{ contest.submission_deadline|date:"M j, Y" }}</time>
+    </p>
+    <h3 class="contest-card__title"><a href="{% url 'contest_detail' contest.pk %}">{{ contest.title }}</a></h3>
+    <p class="contest-card__note">{{ contest.description|truncatewords:24 }}</p>
+    {% if contest.prize_information %}<p class="contest-card__prize">{{ contest.prize_information|truncatewords:14 }}</p>{% endif %}
+</article>

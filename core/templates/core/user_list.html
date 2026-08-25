@@ -1,14 +1,37 @@
 {% extends "core/base.html" %}
-
+{% load profile_extras %}
 {% block title %}{{ list_title }} — {{ profile_user.username }} — LaunchPad{% endblock %}
-
 {% block content %}
-<header class="page-intro"><div class="page-intro__copy"><p class="eyebrow">{{ profile_user.username }}'s network</p><h1>{{ list_title }}.</h1><p class="lede">People connected to {{ profile_user.username }} on LaunchPad.</p></div><a class="button button--secondary" href="{% url 'public_profile' profile_user.username %}">Back to profile</a></header>
+<header class="page-head">
+    <div class="page-head__text">
+        <p class="page-head__eyebrow"><a href="{% url 'public_profile' profile_user.username %}">&#64;{{ profile_user.username }}</a></p>
+        <h1 class="page-head__title">{{ list_title }}.</h1>
+        <p class="page-head__lede">{{ people|length }} {% if list_title == "Followers" %}{{ people|length|pluralize:"person follows,people follow" }}{% else %}{{ people|length|pluralize:"account,accounts" }} followed by{% endif %} {{ profile_user.username }}.</p>
+    </div>
+    <nav class="editorial-tabs" aria-label="Profile sections">
+        <a class="editorial-tab{% if list_title == 'Followers' %} editorial-tab--current{% endif %}"{% if list_title == 'Followers' %} aria-current="page"{% endif %} href="{% url 'followers_list' profile_user.username %}">Followers</a>
+        <a class="editorial-tab{% if list_title == 'Following' %} editorial-tab--current{% endif %}"{% if list_title == 'Following' %} aria-current="page"{% endif %} href="{% url 'following_list' profile_user.username %}">Following</a>
+    </nav>
+</header>
+
 {% if people %}
-<div class="people-grid">
-    {% for person in people %}
-    <article class="panel person-card"><div class="person-card__avatar">{{ person.username|first|upper }}</div><div><h2>{% if person.profile.display_name %}{{ person.profile.display_name }}{% else %}{{ person.username }}{% endif %}</h2><p class="muted">@{{ person.username }}</p>{% if person.profile.college %}<p class="muted">{{ person.profile.college }}</p>{% endif %}<a class="text-link" href="{% url 'public_profile' person.username %}">View profile →</a></div></article>
-    {% endfor %}
-</div>
-{% else %}<div class="empty-state"><div><div class="empty-state__icon" aria-hidden="true">⌁</div><h2>No {{ list_title|lower }} yet</h2><p>When people connect with {{ profile_user.username }}, they will appear here.</p></div></div>{% endif %}
+    <ul class="people-list">
+        {% for person in people %}
+            <li class="people-list__row">
+                {% include "core/partials/avatar.html" with profile_user=person size="lg" %}
+                <span class="people-list__text">
+                    <a class="people-list__name" href="{% url 'public_profile' person.username %}">{% if person.profile.display_name|has_profile_text %}{{ person.profile.display_name|clean_profile_text }}{% else %}{{ person.username }}{% endif %}</a>
+                    <span class="people-list__meta">&#64;{{ person.username }}{% if person.profile.college|has_profile_text %} &middot; {{ person.profile.college|clean_profile_text }}{% endif %}</span>
+                </span>
+                <a class="people-list__link" href="{% url 'public_profile' person.username %}">View profile</a>
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <div class="editorial-empty">
+        <h2>Nothing here yet</h2>
+        <p>{% if list_title == "Followers" %}No one is following {{ profile_user.username }} yet.{% else %}{{ profile_user.username }} is not following anyone yet.{% endif %}</p>
+        <a class="editorial-button" href="{% url 'project_list' %}">Discover projects</a>
+    </div>
+{% endif %}
 {% endblock %}

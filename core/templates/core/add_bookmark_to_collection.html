@@ -1,26 +1,21 @@
 {% extends "core/base.html" %}
-
-{% block title %}Organize saved work — LaunchPad{% endblock %}
-
+{% block title %}Organise saved work — LaunchPad{% endblock %}
 {% block content %}
+<div class="form-shell">
+    <header class="form-shell__head">
+        <p class="page-head__eyebrow">Research shelf</p>
+        <h1 class="page-head__title">Place this project with intent.</h1>
+        <p class="page-head__lede">Choose a private collection for <strong>{{ bookmark.project.title }}</strong>.</p>
+    </header>
 
-<header class="page-intro form-layout">
-    <div class="page-intro__copy">
-        <p class="eyebrow">Research shelf</p>
-        <h1>Place this project with intent.</h1>
-        <p class="lede">Choose a private collection for <strong>{{ bookmark.project.title }}</strong>.</p>
-    </div>
-</header>
-
-<section class="panel form-card form-layout">
-    <form method="post">
+    <form class="form-body" method="post">
         {% csrf_token %}
-        {{ form.as_p }}
-        <div class="button-row">
-            <button type="submit">Add to collection</button>
-            <a class="button button--secondary" href="{% url 'project_detail' bookmark.project.pk %}">Cancel</a>
+        {% include "core/partials/form_errors.html" %}
+        {% for field in form %}{% include "core/partials/form_field.html" %}{% endfor %}
+        <div class="form-body__actions">
+            <button class="editorial-button" type="submit">Add to collection</button>
+            <a class="editorial-button editorial-button--quiet" href="{% url 'my_bookmarks' %}">Cancel</a>
         </div>
     </form>
-</section>
-
+</div>
 {% endblock %}

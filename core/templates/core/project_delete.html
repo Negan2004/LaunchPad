@@ -1,21 +1,24 @@
 {% extends "core/base.html" %}
-
 {% block title %}Delete {{ project.title }} — LaunchPad{% endblock %}
-
 {% block content %}
+<div class="form-shell">
+    <header class="form-shell__head">
+        <p class="page-head__eyebrow">Irreversible</p>
+        <h1 class="page-head__title">Delete this project?</h1>
+        <p class="page-head__lede"><strong>{{ project.title }}</strong> and everything attached to it — images, comments, likes and bookmarks — will be removed for good.</p>
+    </header>
 
-<section class="panel form-card danger-panel">
-    <p class="eyebrow">Project control</p>
-    <h1>Delete {{ project.title }}?</h1>
-    <p class="lede">This permanently removes the project and its associated project images.</p>
-    <p class="danger-panel__note">This action cannot be undone.</p>
-    <form method="post" style="margin-top: 1.4rem;">
+    <div class="danger-note">
+        <p>This cannot be undone. If you only want to take the project out of Discover, edit it and set its visibility to private instead.</p>
+    </div>
+
+    <form class="form-body" method="post">
         {% csrf_token %}
-        <div class="button-row">
-            <button class="button--danger" type="submit">Yes, delete project</button>
-            <a class="button button--secondary" href="{% url 'project_detail' project.pk %}">Keep project</a>
+        <div class="form-body__actions">
+            <button class="editorial-button editorial-button--danger" type="submit">Delete permanently</button>
+            <a class="editorial-button editorial-button--quiet" href="{% url 'project_detail' project.pk %}">Keep project</a>
+            <a class="editorial-button editorial-button--quiet" href="{% url 'edit_project' project.pk %}">Edit instead</a>
         </div>
     </form>
-</section>
-
+</div>
 {% endblock %}

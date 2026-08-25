@@ -3,38 +3,88 @@
 {% block title %}{% if edit_mode %}Edit {{ project.title }}{% else %}New project{% endif %} — LaunchPad{% endblock %}
 
 {% block content %}
+<div class="form-shell form-shell--wide">
+    <header class="form-shell__head">
+        <p class="page-head__eyebrow">{% if edit_mode %}Project control{% else %}Project launch{% endif %}</p>
+        <h1 class="page-head__title">{% if edit_mode %}Refine {{ project.title }}.{% else %}Set your work in motion.{% endif %}</h1>
+        <p class="page-head__lede">{% if edit_mode %}Update the project brief or attach more images. Existing images remain in place.{% else %}Write a clear project brief, then add visuals that make the work tangible.{% endif %}</p>
+    </header>
 
-<header class="page-intro form-layout">
-    <div class="page-intro__copy">
-        <p class="eyebrow">{% if edit_mode %}Project control{% else %}Project launch{% endif %}</p>
-        <h1>{% if edit_mode %}Refine {{ project.title }}.{% else %}Set your work in motion.{% endif %}</h1>
-        <p class="lede">{% if edit_mode %}Update the project brief or attach more images. Existing images remain in place.{% else %}Create a clear project brief, then add visuals that make the work tangible.{% endif %}</p>
-    </div>
-</header>
-
-<section class="panel form-card form-layout">
-    <form method="post" enctype="multipart/form-data">
+    <form class="form-body" method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        {{ form.as_p }}
+        {% include "core/partials/form_errors.html" %}
 
-        <div class="file-drop">
-            <label for="id_images">Project images</label>
-            <input type="file" name="images" id="id_images" accept="image/*" multiple>
-            <p class="field-help">Select one or more images. {% if edit_mode %}They will be added to the existing project gallery.{% else %}Images will be attached when this project is created.{% endif %}</p>
-            {% for image_form in image_forms %}
-                {{ image_form.image.errors }}
-            {% endfor %}
-        </div>
+        <section class="form-section">
+            <div class="form-section__head">
+                <h2 class="form-section__title">The brief</h2>
+                <p class="form-section__note">Title and summary are what people read first on Discover.</p>
+            </div>
+            {% include "core/partials/form_field.html" with field=form.title %}
+            {% include "core/partials/form_field.html" with field=form.short_description %}
+            {% include "core/partials/form_field.html" with field=form.description %}
+        </section>
 
-        <div class="button-row">
-            <button type="submit">{% if edit_mode %}Save project changes{% else %}Create project{% endif %}</button>
+        <section class="form-section">
+            <div class="form-section__head">
+                <h2 class="form-section__title">Classification</h2>
+                <p class="form-section__note">Category, stage and comma-separated technologies drive discovery and filtering.</p>
+            </div>
+            <div class="form-grid">
+                {% include "core/partials/form_field.html" with field=form.category %}
+                {% include "core/partials/form_field.html" with field=form.stage %}
+                {% include "core/partials/form_field.html" with field=form.technologies %}
+                {% include "core/partials/form_field.html" with field=form.tags %}
+            </div>
+        </section>
+
+        <section class="form-section">
+            <div class="form-section__head">
+                <h2 class="form-section__title">Links and documentation</h2>
+                <p class="form-section__note">Anything that lets a reader go deeper.</p>
+            </div>
+            <div class="form-grid">
+                {% include "core/partials/form_field.html" with field=form.demo_url %}
+                {% include "core/partials/form_field.html" with field=form.repository_url %}
+                {% include "core/partials/form_field.html" with field=form.documentation_url %}
+                {% include "core/partials/form_field.html" with field=form.documentation_file %}
+            </div>
+        </section>
+
+        <section class="form-section">
+            <div class="form-section__head">
+                <h2 class="form-section__title">Images</h2>
+                <p class="form-section__note">The first image becomes the card and article header. {% if edit_mode %}New files are added to the existing gallery.{% else %}Projects without an image still look intentional.{% endif %}</p>
+            </div>
+            <div class="field">
+                <label class="field__label" for="id_images">Project images</label>
+                <input type="file" name="images" id="id_images" accept="image/*" multiple>
+                <p class="field__help">Select one or more images.</p>
+                {% for image_form in image_forms %}
+                    {% if image_form.image.errors %}<ul class="field__errors">{% for error in image_form.image.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="form-section">
+            <div class="form-section__head">
+                <h2 class="form-section__title">Publishing</h2>
+                <p class="form-section__note">Only published, public projects appear on Discover. Drafts and private projects stay visible to you.</p>
+            </div>
+            <div class="form-grid">
+                {% include "core/partials/form_field.html" with field=form.status %}
+                {% include "core/partials/form_field.html" with field=form.visibility %}
+            </div>
+        </section>
+
+        <div class="form-body__actions">
+            <button class="editorial-button" type="submit">{% if edit_mode %}Save project changes{% else %}Create project{% endif %}</button>
             {% if edit_mode %}
-                <a class="button button--secondary" href="{% url 'project_detail' project.pk %}">Cancel</a>
+                <a class="editorial-button editorial-button--quiet" href="{% url 'project_detail' project.pk %}">Cancel</a>
+                <a class="editorial-button editorial-button--quiet" href="{% url 'delete_project' project.pk %}">Delete project</a>
             {% else %}
-                <a class="button button--secondary" href="{% url 'project_list' %}">Cancel</a>
+                <a class="editorial-button editorial-button--quiet" href="{% url 'project_list' %}">Cancel</a>
             {% endif %}
         </div>
     </form>
-</section>
-
+</div>
 {% endblock %}

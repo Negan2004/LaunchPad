@@ -1,6 +1,107 @@
 {% extends "core/base.html" %}
 {% block title %}{{ contest.title }} — LaunchPad{% endblock %}
 {% block content %}
-<header class="detail-hero"><div class="detail-hero__main panel"><div class="detail-hero__meta"><span class="badge badge--{{ contest.status }}">{{ contest.get_status_display }}</span><span class="badge">{{ contest.participants.count }} participants{% if contest.max_participants %} / {{ contest.max_participants }}{% endif %}</span></div><h1>{{ contest.title }}</h1><p class="detail-description">{{ contest.description }}</p><div class="contest-copy"><h2>Rules</h2><p>{{ contest.rules|linebreaksbr }}</p>{% if contest.prize_information %}<h2>Prizes</h2><p>{{ contest.prize_information|linebreaksbr }}</p>{% endif %}</div></div><aside class="detail-side"><div class="panel engagement-card"><span class="engagement-label">Registration deadline</span><strong>{{ contest.registration_deadline|date:"M j, Y · g:i A" }}</strong><span class="engagement-label">Submission deadline</span><strong>{{ contest.submission_deadline|date:"M j, Y · g:i A" }}</strong>{% if user.is_authenticated and not participant %}<form method="post" action="{% url 'contest_register' contest.pk %}">{% csrf_token %}<button type="submit">Register now</button></form>{% elif participant %}<span class="badge badge--published">Registered</span><a class="button" href="{% url 'contest_submit' contest.pk %}">{% if participant.submissions.exists %}Update submission{% else %}Submit project{% endif %}</a>{% elif not user.is_authenticated %}<a class="button" href="{% url 'login' %}?next={% url 'contest_detail' contest.pk %}">Log in to join</a>{% endif %}{% if user.is_staff %}<a class="button button--secondary" href="{% url 'edit_contest' contest.pk %}">Edit contest</a>{% endif %}</div></aside></header>
-<section class="panel"><div class="section-heading"><div><p class="eyebrow">Community entries</p><h2>Submissions</h2></div></div>{% for submission in submissions %}<article class="submission-row"><div><h3>{{ submission.submission_title }}</h3><p>{{ submission.description|truncatewords:35 }}</p><span class="muted">{{ submission.participant.user.username }} · {{ submission.status|title }}{% if submission.score %} · Score {{ submission.score }}{% endif %}</span></div>{% if submission.status == 'winner' and submission.certificate %}<a class="text-link" href="{% url 'certificate_detail' submission.certificate.pk %}">View certificate</a>{% endif %}{% if user.is_staff %}<form method="post" action="{% url 'review_submission' submission.pk %}" class="review-form">{% csrf_token %}<select name="status"><option value="submitted">Submitted</option><option value="under_review">Under review</option><option value="runner_up">Runner up</option><option value="winner">Winner</option><option value="rejected">Rejected</option></select><input type="number" step="0.01" name="score" placeholder="Score"><button type="submit">Save</button></form>{% endif %}</article>{% empty %}<p class="muted">No submissions yet.</p>{% endfor %}</div></section>
+<header class="contest-hero">
+    <div class="contest-hero__text">
+        <p class="contest-hero__eyebrow">{{ contest.get_status_display }} &bull; closes {{ contest.submission_deadline|date:"M Y" }}</p>
+        <h1 class="contest-hero__title">{{ contest.title }}</h1>
+        <p class="contest-hero__lede">{{ contest.description|truncatewords:44 }}</p>
+    </div>
+    <div class="contest-hero__panel">
+        <dl class="contest-facts">
+            <div><dt>Registration</dt><dd>{{ contest.registration_deadline|date:"M j, Y" }}</dd></div>
+            <div><dt>Submission</dt><dd>{{ contest.submission_deadline|date:"M j, Y" }}</dd></div>
+            <div><dt>Participants</dt><dd>{{ contest.participants.count }}{% if contest.max_participants %} / {{ contest.max_participants }}{% endif %}</dd></div>
+        </dl>
+        <div class="contest-hero__actions">
+            {% if participant %}
+                <p class="contest-hero__state">You are registered</p>
+                <a class="editorial-button" href="{% url 'contest_submit' contest.pk %}">{% if participant.submissions.exists %}Update submission{% else %}Submit project{% endif %}</a>
+            {% elif user.is_authenticated %}
+                <form method="post" action="{% url 'contest_register' contest.pk %}">
+                    {% csrf_token %}
+                    <button class="editorial-button" type="submit">Register now</button>
+                </form>
+            {% else %}
+                <a class="editorial-button" href="{% url 'login' %}?next={% url 'contest_detail' contest.pk %}">Log in to join</a>
+            {% endif %}
+            {% if user.is_staff %}<a class="editorial-button editorial-button--quiet" href="{% url 'edit_contest' contest.pk %}">Edit contest</a>{% endif %}
+        </div>
+    </div>
+</header>
+
+<div class="contest-body">
+    <nav class="contest-nav" aria-label="Contest sections">
+        <a class="contest-nav__link contest-nav__link--current" href="#overview">Overview</a>
+        <a class="contest-nav__link" href="#rules">Rules &amp; criteria</a>
+        {% if contest.prize_information %}<a class="contest-nav__link" href="#prizes">Prizes</a>{% endif %}
+        <a class="contest-nav__link" href="#submissions">Submissions</a>
+    </nav>
+
+    <div class="contest-main">
+        <section class="contest-section" id="overview">
+            <h2 class="contest-section__title">Overview</h2>
+            <div class="contest-prose">{{ contest.description|linebreaks }}</div>
+        </section>
+
+        <section class="contest-section" id="rules">
+            <h2 class="contest-section__title">Rules &amp; criteria</h2>
+            <div class="contest-panel">{{ contest.rules|linebreaks }}</div>
+        </section>
+
+        {% if contest.prize_information %}
+            <section class="contest-section" id="prizes">
+                <h2 class="contest-section__title">Prizes</h2>
+                <div class="contest-panel">{{ contest.prize_information|linebreaks }}</div>
+            </section>
+        {% endif %}
+
+        <section class="contest-section" id="submissions">
+            <div class="contest-section__head">
+                <h2 class="contest-section__title">Latest submissions</h2>
+                <span class="contest-section__count">{{ submissions|length }} entr{{ submissions|length|pluralize:"y,ies" }}</span>
+            </div>
+            {% if submissions %}
+                <div class="entry-grid">
+                    {% for submission in submissions %}
+                        <article class="entry">
+                            {% include "core/partials/project_card_media.html" with project=submission.project media_modifier="article-card__media--work" %}
+                            <hr class="article-card__rule">
+                            <div class="entry__foot">
+                                <h3 class="entry__title"><a href="{% url 'project_detail' submission.project.pk %}">{{ submission.submission_title }}</a></h3>
+                                <p class="entry__meta">
+                                    <span>By {{ submission.participant.user.username }}</span>
+                                    <span class="entry__status">{{ submission.get_status_display }}</span>
+                                    {% if submission.score %}<span>Score {{ submission.score }}</span>{% endif %}
+                                </p>
+                            </div>
+                            {% if submission.description %}<p class="entry__note">{{ submission.description|truncatewords:28 }}</p>{% endif %}
+                            {% if submission.status == 'winner' and submission.certificate %}
+                                <p class="entry__certificate"><a href="{% url 'certificate_detail' submission.certificate.pk %}">View certificate</a></p>
+                            {% endif %}
+                            {% if user.is_staff %}
+                                <form class="entry__review" method="post" action="{% url 'review_submission' submission.pk %}">
+                                    {% csrf_token %}
+                                    <label class="visually-hidden" for="status-{{ submission.pk }}">Review status</label>
+                                    <select id="status-{{ submission.pk }}" name="status">
+                                        <option value="submitted">Submitted</option>
+                                        <option value="under_review">Under review</option>
+                                        <option value="runner_up">Runner up</option>
+                                        <option value="winner">Winner</option>
+                                        <option value="rejected">Rejected</option>
+                                    </select>
+                                    <label class="visually-hidden" for="score-{{ submission.pk }}">Score</label>
+                                    <input id="score-{{ submission.pk }}" type="number" step="0.01" name="score" placeholder="Score">
+                                    <button class="editorial-button editorial-button--quiet" type="submit">Save</button>
+                                </form>
+                            {% endif %}
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="section-empty">No submissions yet. {% if participant %}<a href="{% url 'contest_submit' contest.pk %}">Be the first to enter</a>.{% endif %}</p>
+            {% endif %}
+        </section>
+    </div>
+</div>
 {% endblock %}

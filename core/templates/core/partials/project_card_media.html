@@ -4,11 +4,11 @@ The image well of a Discover card.
 Projects without an image fall back to the design's dark code-panel treatment,
 rendered from the project's own fields rather than a placeholder graphic.
 {% endcomment %}{% load profile_extras %}{% with primary_image=project.images.all|first %}{% if primary_image %}
-    <a class="article-card__media" href="{% url 'project_detail' project.pk %}" tabindex="-1" aria-hidden="true">
+    <a class="article-card__media {{ media_modifier }}" href="{% url 'project_detail' project.pk %}" tabindex="-1" aria-hidden="true">
         <img src="{{ primary_image.image.url }}" alt="{{ primary_image.caption|default:project.title }}" loading="lazy">
     </a>
 {% else %}
-    <a class="article-card__media article-card__media--code" href="{% url 'project_detail' project.pk %}" tabindex="-1" aria-hidden="true">
+    <a class="article-card__media article-card__media--code {{ media_modifier }}" href="{% url 'project_detail' project.pk %}" tabindex="-1" aria-hidden="true">
         <pre class="article-card__code">{
   "title":    "{{ project.title }}",
   "category": "{{ project.category }}",

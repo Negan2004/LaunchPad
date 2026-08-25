@@ -1,26 +1,75 @@
 {% extends "core/base.html" %}
-
+{% load profile_extras %}
 {% block title %}Notifications — LaunchPad{% endblock %}
-
 {% block content %}
-<header class="page-intro">
-    <div class="page-intro__copy"><p class="eyebrow">Your activity</p><h1>Notifications.</h1><p class="lede">Keep up with the people and projects moving through your LaunchPad network.</p></div>
-    {% if notifications %}<form method="post" action="{% url 'mark_all_notifications_read' %}">{% csrf_token %}<button type="submit" class="button button--secondary">Mark all read</button></form>{% endif %}
-</header>
-{% if notifications %}
-<section class="notification-list">
-    {% for notification in notifications %}
-        <article class="panel notification-card{% if not notification.is_read %} notification-card--unread{% endif %}">
-            <div><span class="badge badge--{{ notification.notification_type }}">{{ notification.notification_type|title }}</span><p>{{ notification.message }}</p><time datetime="{{ notification.created_at|date:'c' }}">{{ notification.created_at|date:"M j, Y · g:i A" }}</time></div>
-            <div class="notification-card__actions">
-                {% if notification.project %}<a class="text-link" href="{% url 'project_detail' notification.project.pk %}">Open project</a>{% endif %}
-                {% if not notification.is_read %}<form method="post" action="{% url 'mark_notification_read' notification.pk %}">{% csrf_token %}<button class="button button--quiet" type="submit">Mark read</button></form>{% endif %}
+<div class="inbox">
+    <header class="inbox__head">
+        <h1 class="inbox__title">Activity</h1>
+        {% if notifications %}
+            <div class="inbox__actions">
+                <form method="post" action="{% url 'mark_all_notifications_read' %}">
+                    {% csrf_token %}
+                    <button class="editorial-button editorial-button--quiet" type="submit">Mark all read</button>
+                </form>
+                <form method="post" action="{% url 'clear_notifications' %}">
+                    {% csrf_token %}
+                    <button class="inbox__clear" type="submit">Clear all</button>
+                </form>
             </div>
-        </article>
-    {% endfor %}
-</section>
-<form method="post" action="{% url 'clear_notifications' %}" class="notification-clear">{% csrf_token %}<button type="submit" class="button button--danger">Clear notifications</button></form>
-{% else %}
-<div class="empty-state"><div><div class="empty-state__icon" aria-hidden="true">✦</div><h2>You are all caught up</h2><p>Notifications about follows, likes, comments, contests, and recognition will appear here.</p></div></div>
-{% endif %}
+        {% endif %}
+    </header>
+
+    {% if notifications %}
+        {% regroup notifications by created_at|date:"F j, Y" as notification_days %}
+        {% for day in notification_days %}
+            <section class="inbox__group" aria-label="{{ day.grouper }}">
+                <h2 class="inbox__day">{{ day.grouper }}</h2>
+                <ul class="inbox__list">
+                    {% for notification in day.list %}
+                        <li class="notification{% if not notification.is_read %} notification--unread{% endif %}">
+                            {% if notification.sender %}
+                                {% include "core/partials/avatar.html" with profile_user=notification.sender size="lg" %}
+                            {% else %}
+                                <span class="avatar avatar--lg avatar--system" aria-hidden="true">&bull;</span>
+                            {% endif %}
+                            <div class="notification__body">
+                                <p class="notification__message">{{ notification.message }}</p>
+                                <p class="notification__meta">
+                                    <span class="notification__kind">{{ notification.notification_type|title }}</span>
+                                    <span class="meta-dot" aria-hidden="true">&bull;</span>
+                                    <time datetime="{{ notification.created_at|date:'c' }}">{{ notification.created_at|timesince|split_commas|first }} ago</time>
+                                </p>
+                                <div class="notification__actions">
+                                    {% if notification.project %}<a href="{% url 'project_detail' notification.project.pk %}">Open project</a>{% endif %}
+                                    {% if notification.sender %}<a href="{% url 'public_profile' notification.sender.username %}">View profile</a>{% endif %}
+                                    {% if not notification.is_read %}
+                                        <form method="post" action="{% url 'mark_notification_read' notification.pk %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="notification__read">Mark read</button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% if notification.project %}
+                                {% with thumb=notification.project.images.all|first %}
+                                    {% if thumb %}
+                                        <a class="notification__thumb" href="{% url 'project_detail' notification.project.pk %}" tabindex="-1" aria-hidden="true">
+                                            <img src="{{ thumb.image.url }}" alt="" loading="lazy">
+                                        </a>
+                                    {% endif %}
+                                {% endwith %}
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </section>
+        {% endfor %}
+    {% else %}
+        <div class="editorial-empty">
+            <h2>You are all caught up</h2>
+            <p>Notifications about follows, likes, comments, contests and recognition will appear here.</p>
+            <a class="editorial-button" href="{% url 'project_list' %}">Discover projects</a>
+        </div>
+    {% endif %}
+</div>
 {% endblock %}

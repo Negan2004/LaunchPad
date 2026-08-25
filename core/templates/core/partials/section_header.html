@@ -1,0 +1,13 @@
+{% comment %}
+Section header: an uppercase eyebrow, a display heading and an optional link
+on the right, above a hairline rule.
+
+    {% include "core/partials/section_header.html" with eyebrow="Featured" heading="Work selected for the front page." link_url=url link_text="View all" %}
+{% endcomment %}<div class="section-head">
+    <div class="section-head__text">
+        {% if eyebrow %}<p class="section-head__eyebrow">{{ eyebrow }}</p>{% endif %}
+        <h2 class="section-head__title">{{ heading }}</h2>
+        {% if note %}<p class="section-head__note">{{ note }}</p>{% endif %}
+    </div>
+    {% if link_url %}<a class="section-head__link" href="{{ link_url }}">{{ link_text|default:"View all" }}</a>{% endif %}
+</div>

@@ -1,6 +1,91 @@
 {% extends "core/base.html" %}
 {% block title %}Contests — LaunchPad{% endblock %}
 {% block content %}
-<header class="page-intro"><div class="page-intro__copy"><p class="eyebrow">Innovation arena</p><h1>Contests that move ideas forward.</h1><p class="lede">Join a challenge, submit your best work, and earn recognition that stays with your profile.</p></div>{% if user.is_staff %}<a class="button" href="{% url 'create_contest' %}">Create contest</a>{% endif %}</header>
-<div class="contest-grid">{% for contest in contests %}<article class="panel contest-card"><div class="project-card__meta"><span class="badge badge--{{ contest.status }}">{{ contest.get_status_display }}</span><span class="muted">{{ contest.participants.count }} participants</span></div><h2>{{ contest.title }}</h2><p>{{ contest.description|truncatewords:35 }}</p><div class="contest-card__dates"><span>Register by {{ contest.registration_deadline|date:"M j, Y" }}</span><span>Submit by {{ contest.submission_deadline|date:"M j, Y" }}</span></div><a class="text-link" href="{% url 'contest_detail' contest.pk %}">View contest →</a></article>{% empty %}<div class="empty-state"><div><h2>No contests published yet</h2><p>New innovation challenges will appear here.</p></div></div>{% endfor %}</div>
+<header class="arena-head">
+    <div class="arena-head__text">
+        <p class="arena-head__eyebrow">Ongoing initiatives</p>
+        <h1 class="arena-head__title">Creative challenges.</h1>
+        <p class="page-head__lede">Join a challenge, submit your best work, and earn recognition that stays with your profile.</p>
+    </div>
+    {% if user.is_staff %}
+        <div class="page-head__actions">
+            <a class="editorial-button" href="{% url 'create_contest' %}">Create contest</a>
+            <a class="editorial-button editorial-button--quiet" href="{% url 'manage_contests' %}">Manage</a>
+        </div>
+    {% endif %}
+</header>
+
+{% if active_contests %}
+    <section class="arena-section">
+        <div class="rule-head">
+            <h2 class="rule-head__title">Active challenges</h2>
+        </div>
+        <div class="arena-active">
+            {% for contest in active_contests %}
+                <article class="arena-card{% if forloop.first %} arena-card--lead{% endif %}">
+                    <p class="arena-card__status">{{ contest.get_status_display }}</p>
+                    <h3 class="arena-card__title"><a href="{% url 'contest_detail' contest.pk %}">{{ contest.title }}</a></h3>
+                    {% if forloop.first %}<p class="arena-card__note">{{ contest.description|truncatewords:32 }}</p>{% endif %}
+                    <dl class="arena-card__meta">
+                        <div><dt>Deadline</dt><dd>{{ contest.submission_deadline|date:"d M Y"|upper }}</dd></div>
+                        <div><dt>Participants</dt><dd>{{ contest.participant_total }}{% if contest.max_participants %} / {{ contest.max_participants }}{% endif %}</dd></div>
+                        <div><dt>Entries</dt><dd>{{ contest.submission_total }}</dd></div>
+                    </dl>
+                </article>
+            {% endfor %}
+        </div>
+    </section>
+{% endif %}
+
+<div class="arena-split">
+    <section class="arena-section">
+        <div class="rule-head">
+            <h2 class="rule-head__title">Upcoming</h2>
+        </div>
+        {% if upcoming_contests %}
+            <ul class="arena-list">
+                {% for contest in upcoming_contests %}
+                    <li class="arena-list__item">
+                        <h3 class="arena-list__title"><a href="{% url 'contest_detail' contest.pk %}">{{ contest.title }}</a></h3>
+                        <p class="arena-list__note">{{ contest.description|truncatewords:14 }}</p>
+                        <p class="arena-list__value">Opens {{ contest.registration_deadline|date:"d M"|upper }}</p>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="section-empty">No upcoming contests announced.</p>
+        {% endif %}
+    </section>
+
+    <section class="arena-section">
+        <div class="rule-head">
+            <h2 class="rule-head__title">Archive</h2>
+        </div>
+        {% if closed_contests %}
+            <ul class="arena-list">
+                {% for contest in closed_contests %}
+                    <li class="arena-list__item">
+                        <h3 class="arena-list__title"><a href="{% url 'contest_detail' contest.pk %}">{{ contest.title }}</a></h3>
+                        {% if contest.winning_submissions %}
+                            <p class="arena-list__note">Winner: &#64;{{ contest.winning_submissions.0.participant.user.username }}</p>
+                        {% else %}
+                            <p class="arena-list__note">No winner recorded.</p>
+                        {% endif %}
+                        <p class="arena-list__value">{{ contest.submission_total }} entr{{ contest.submission_total|pluralize:"y,ies" }} &middot; {{ contest.get_status_display|upper }}</p>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="section-empty">No contests have closed yet.</p>
+        {% endif %}
+    </section>
+</div>
+
+{% if not contests %}
+    <div class="editorial-empty">
+        <h2>No contests published yet</h2>
+        <p>New innovation challenges will appear here.</p>
+        <a class="editorial-button" href="{% url 'project_list' %}">Discover projects</a>
+    </div>
+{% endif %}
 {% endblock %}

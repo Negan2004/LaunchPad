@@ -1,3 +1,167 @@
 {% extends "core/base.html" %}
+{% load profile_extras %}
 {% block title %}{{ project.title }} — LaunchPad{% endblock %}
-{% block content %}<section class="detail-hero"><div class="detail-hero__main card"><div class="detail-hero__meta"><span class="badge badge--category">{{ project.category }}</span><span class="badge badge--{{ project.visibility }}">{{ project.get_visibility_display }}</span><span class="badge badge--{{ project.status }}">{{ project.get_status_display }}</span><span class="badge badge--{{ project.stage }}">{{ project.get_stage_display }}</span>{% if project.featured %}<span class="badge badge--featured">Featured</span>{% endif %}</div><h1>{{ project.title }}</h1><p class="owner-line">A project by <a href="{% url 'public_profile' project.owner.username %}">{{ project.owner.username }}</a> · created {{ project.created_at|date:"M d, Y" }}</p>{% if project.short_description %}<p class="lede">{{ project.short_description }}</p>{% endif %}<div class="detail-description">{{ project.description }}</div>{% if project.technologies %}<div class="tag-cloud"><strong>Technologies</strong><span class="badge">{{ project.technologies }}</span></div>{% endif %}{% if project.tags %}<div class="tag-cloud"><strong>Tags</strong><span class="badge">{{ project.tags }}</span></div>{% endif %}</div><aside class="detail-side">{% include "core/partials/engagement_card.html" %}{% if project.demo_url or project.repository_url or project.documentation_url or project.documentation_file %}<div class="engagement-card card"><p class="eyebrow">Project resources</p><div class="resource-links">{% if project.demo_url %}<a class="button button--secondary" href="{{ project.demo_url }}" target="_blank" rel="noopener">Open live demo ↗</a>{% endif %}{% if project.repository_url %}<a class="button button--secondary" href="{{ project.repository_url }}" target="_blank" rel="noopener">View source ↗</a>{% endif %}{% if project.documentation_url %}<a class="button button--secondary" href="{{ project.documentation_url }}" target="_blank" rel="noopener">Read documentation ↗</a>{% endif %}{% if project.documentation_file %}<a class="button button--secondary" href="{{ project.documentation_file.url }}">Download documentation</a>{% endif %}</div></div>{% endif %}{% if user == project.owner %}<div class="engagement-card card"><p class="eyebrow">Owner controls</p><div class="resource-links"><a class="button button--secondary" href="{% url 'edit_project' project.pk %}">Edit project</a><a class="button button--secondary" href="{% url 'delete_project' project.pk %}">Delete project</a></div></div>{% elif user.is_authenticated %}<a class="button button--secondary" href="{% url 'report_project' project.pk %}">Report project</a>{% endif %}</aside></section>{% with project_images=project.images.all %}{% if project_images %}<section aria-labelledby="project-gallery-heading"><div class="section-heading"><div><p class="eyebrow">Visual notes</p><h2 id="project-gallery-heading">Project gallery</h2></div></div><div class="gallery">{% for project_image in project_images %}{% if forloop.first %}<div><div class="gallery__primary"><img src="{{ project_image.image.url }}" alt="{{ project_image.caption|default:project.title }}"></div>{% if project_image.caption %}<p class="gallery__caption">{{ project_image.caption }}</p>{% endif %}</div>{% endif %}{% endfor %}{% if project_images|length > 1 %}<div class="gallery__thumbs">{% for project_image in project_images %}{% if not forloop.first %}<div class="gallery__thumb"><img src="{{ project_image.image.url }}" alt="{{ project_image.caption|default:project.title }}"></div>{% endif %}{% endfor %}</div>{% endif %}</div></section>{% endif %}{% endwith %}<section class="comments-section" aria-labelledby="comments-heading"><div class="section-heading"><div><p class="eyebrow">Discussion</p><h2 id="comments-heading">Notes from the community</h2></div></div>{% if user.is_authenticated %}<div class="comment-compose card"><form method="post" action="{% url 'add_comment' project.pk %}">{% csrf_token %}{{ comment_form.as_p }}<button type="submit">Add a comment</button></form></div>{% else %}<div class="empty-state" style="min-height:10rem;"><div><h2>Join the discussion</h2><p>Log in to leave thoughtful feedback.</p><a class="button" href="{% url 'login' %}">Log in</a></div></div>{% endif %}{% if comments %}<div class="comment-thread">{% for comment in comments %}{% include "core/comment.html" with comment=comment level=0 %}{% endfor %}</div>{% else %}<div class="empty-state" style="min-height:12rem;margin-top:1rem;"><div><h2>No discussion yet</h2><p>The first useful observation can help move a project forward.</p></div></div>{% endif %}</section>{% endblock %}
+{% block content %}
+<div class="article-layout">
+    <article class="article-main">
+        <header class="article-header">
+            <p class="article-meta">
+                <span class="meta-chip">{{ project.category }}</span>
+                <span class="meta-dot" aria-hidden="true">&bull;</span>
+                <time datetime="{{ project.created_at|date:'c' }}">{{ project.created_at|date:"M j, Y" }}</time>
+                <span class="meta-dot" aria-hidden="true">&bull;</span>
+                <span>{{ project.description|reading_time }} min read</span>
+                {% if project.status != 'published' or project.visibility != 'public' %}
+                    <span class="meta-dot" aria-hidden="true">&bull;</span>
+                    <span class="meta-chip meta-chip--flag">{{ project.get_status_display }} &middot; {{ project.get_visibility_display }}</span>
+                {% endif %}
+                {% if project.featured %}
+                    <span class="meta-dot" aria-hidden="true">&bull;</span>
+                    <span class="meta-chip meta-chip--accent">Featured</span>
+                {% endif %}
+            </p>
+            <h1 class="article-title">{{ project.title }}</h1>
+            <div class="article-byline">
+                <a class="creator" href="{% url 'public_profile' project.owner.username %}">
+                    {% include "core/partials/avatar.html" with profile_user=project.owner size="lg" %}
+                    <span class="creator__text">
+                        <span class="creator__name">{{ project.owner.profile.display_name|clean_profile_text|default:project.owner.username }}</span>
+                        {% if project.owner.profile.college|has_profile_text %}<span class="creator__meta">{{ project.owner.profile.college|clean_profile_text }}</span>{% endif %}
+                    </span>
+                </a>
+                {% include "core/partials/engagement_card.html" %}
+            </div>
+        </header>
+
+        {% with project_images=project.images.all %}
+            {% if project_images %}
+                {% with hero=project_images|first %}
+                    <figure class="article-figure">
+                        <img src="{{ hero.image.url }}" alt="{{ hero.caption|default:project.title }}">
+                        {% if hero.caption %}<figcaption>{{ hero.caption }}</figcaption>{% endif %}
+                    </figure>
+                {% endwith %}
+            {% endif %}
+
+            <div class="article-body">
+                {% if project.short_description %}<p class="article-lead">{{ project.short_description }}</p>{% endif %}
+                {{ project.description|linebreaks }}
+            </div>
+
+            {% if project_images|length > 1 %}
+                <section class="article-gallery" aria-labelledby="gallery-heading">
+                    <h2 class="aside-heading" id="gallery-heading">More from this project</h2>
+                    <div class="article-gallery__grid">
+                        {% for project_image in project_images %}
+                            {% if not forloop.first %}
+                                <figure class="article-gallery__item">
+                                    <img src="{{ project_image.image.url }}" alt="{{ project_image.caption|default:project.title }}" loading="lazy">
+                                    {% if project_image.caption %}<figcaption>{{ project_image.caption }}</figcaption>{% endif %}
+                                </figure>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </section>
+            {% endif %}
+        {% endwith %}
+
+        <section class="comments" aria-labelledby="comments-heading">
+            <h2 class="comments__heading" id="comments-heading">Community discussion ({{ comment_count }})</h2>
+
+            {% if user.is_authenticated %}
+                <form class="comment-form" method="post" action="{% url 'add_comment' project.pk %}">
+                    {% csrf_token %}
+                    {% include "core/partials/avatar.html" with profile_user=user size="lg" %}
+                    <div class="comment-form__body">
+                        <label class="visually-hidden" for="{{ comment_form.content.id_for_label }}">{{ comment_form.content.label }}</label>
+                        {{ comment_form.content }}
+                        {% if comment_form.content.errors %}<ul class="field__errors">{% for error in comment_form.content.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+                        <div class="comment-form__actions">
+                            <button class="editorial-button" type="submit">Post comment</button>
+                        </div>
+                    </div>
+                </form>
+            {% else %}
+                <p class="comments__prompt"><a href="{% url 'login' %}?next={{ request.path|urlencode }}">Log in</a> to join the discussion.</p>
+            {% endif %}
+
+            {% if comments %}
+                <div class="comment-thread">
+                    {% for comment in comments %}{% include "core/comment.html" with comment=comment %}{% endfor %}
+                </div>
+            {% else %}
+                <p class="comments__empty">No discussion yet. The first useful observation can help move a project forward.</p>
+            {% endif %}
+        </section>
+    </article>
+
+    <aside class="article-aside">
+        {% if project.short_description and project.description %}
+            <section class="aside-section">
+                <h2 class="aside-heading">About project</h2>
+                <p class="aside-text">{{ project.short_description }}</p>
+            </section>
+        {% endif %}
+
+        {% if project.demo_url or project.repository_url or project.documentation_url or project.documentation_file %}
+            <section class="aside-section">
+                <h2 class="aside-heading">Resources</h2>
+                <ul class="aside-links">
+                    {% if project.demo_url %}<li><a href="{{ project.demo_url }}" target="_blank" rel="noopener">Open live demo</a></li>{% endif %}
+                    {% if project.repository_url %}<li><a href="{{ project.repository_url }}" target="_blank" rel="noopener">View repository</a></li>{% endif %}
+                    {% if project.documentation_url %}<li><a href="{{ project.documentation_url }}" target="_blank" rel="noopener">Read documentation</a></li>{% endif %}
+                    {% if project.documentation_file %}<li><a href="{{ project.documentation_file.url }}">Download documentation</a></li>{% endif %}
+                </ul>
+            </section>
+        {% endif %}
+
+        {% if project.technologies %}
+            <section class="aside-section">
+                <h2 class="aside-heading">Technologies</h2>
+                <ul class="tech-chips">
+                    {% for technology in project.technologies|split_commas %}<li class="tech-chip">{{ technology }}</li>{% endfor %}
+                </ul>
+            </section>
+        {% endif %}
+
+        {% if project.tags %}
+            <section class="aside-section">
+                <h2 class="aside-heading">Tags</h2>
+                <ul class="tech-chips">
+                    {% for tag in project.tags|split_commas %}<li class="tech-chip"><a href="{% url 'project_list' %}?tag={{ tag|urlencode }}">{{ tag }}</a></li>{% endfor %}
+                </ul>
+            </section>
+        {% endif %}
+
+        <section class="aside-section">
+            <h2 class="aside-heading">Timeline</h2>
+            <ol class="timeline">
+                <li class="timeline__item timeline__item--current">
+                    <span class="timeline__date">{{ project.updated_at|date:"M j, Y" }}</span>
+                    <span class="timeline__text">Last updated &middot; {{ project.get_stage_display|lower }}</span>
+                </li>
+                <li class="timeline__item">
+                    <span class="timeline__date">{{ project.created_at|date:"M j, Y" }}</span>
+                    <span class="timeline__text">Published by {{ project.owner.username }}</span>
+                </li>
+            </ol>
+        </section>
+
+        {% if user == project.owner %}
+            <section class="aside-section">
+                <h2 class="aside-heading">Owner controls</h2>
+                <ul class="aside-links">
+                    <li><a href="{% url 'edit_project' project.pk %}">Edit project</a></li>
+                    <li><a href="{% url 'delete_project' project.pk %}">Delete project</a></li>
+                </ul>
+            </section>
+        {% elif user.is_authenticated %}
+            <section class="aside-section">
+                <ul class="aside-links aside-links--quiet">
+                    <li><a href="{% url 'report_project' project.pk %}">Report project</a></li>
+                </ul>
+            </section>
+        {% endif %}
+    </aside>
+</div>
+{% endblock %}

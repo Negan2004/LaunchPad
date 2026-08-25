@@ -1,3 +1,50 @@
 {% extends "core/base.html" %}
 {% block title %}Manage contests — LaunchPad{% endblock %}
-{% block content %}<header class="page-intro"><div class="page-intro__copy"><p class="eyebrow">Administration</p><h1>Manage contests.</h1><p class="lede">Keep challenges clear, timely, and ready for the student community.</p></div><a class="button" href="{% url 'create_contest' %}">New contest</a></header><section class="panel"><div class="analytics-table">{% for contest in contests %}<div class="analytics-row"><a href="{% url 'contest_detail' contest.pk %}"><strong>{{ contest.title }}</strong></a><span>{{ contest.get_status_display }}</span><span>{{ contest.participants.count }} participants</span><a href="{% url 'edit_contest' contest.pk %}">Edit</a></div>{% empty %}<p class="muted">No contests created.</p>{% endfor %}</div></section>{% endblock %}
+{% block content %}
+<header class="page-head">
+    <div class="page-head__text">
+        <p class="page-head__eyebrow">Administration</p>
+        <h1 class="page-head__title">Manage contests.</h1>
+        <p class="page-head__lede">Keep challenges clear, timely and ready for the student community.</p>
+    </div>
+    <div class="page-head__actions">
+        <a class="editorial-button" href="{% url 'create_contest' %}">New contest</a>
+        <a class="editorial-button editorial-button--quiet" href="{% url 'contests' %}">Public view</a>
+    </div>
+</header>
+
+{% if contests %}
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th scope="col">Contest</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Registration closes</th>
+                    <th scope="col">Submissions close</th>
+                    <th scope="col" class="data-table__number">Participants</th>
+                    <th scope="col" class="data-table__number">Manage</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for contest in contests %}
+                    <tr>
+                        <th scope="row"><a href="{% url 'contest_detail' contest.pk %}">{{ contest.title }}</a></th>
+                        <td>{{ contest.get_status_display }}</td>
+                        <td>{{ contest.registration_deadline|date:"M j, Y" }}</td>
+                        <td>{{ contest.submission_deadline|date:"M j, Y" }}</td>
+                        <td class="data-table__number">{{ contest.participants.count }}</td>
+                        <td class="data-table__number"><a href="{% url 'edit_contest' contest.pk %}">Edit</a></td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="editorial-empty">
+        <h2>No contests created</h2>
+        <p>Create the first challenge for the community.</p>
+        <a class="editorial-button" href="{% url 'create_contest' %}">Create contest</a>
+    </div>
+{% endif %}
+{% endblock %}

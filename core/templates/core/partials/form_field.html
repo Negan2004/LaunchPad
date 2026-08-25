@@ -1,0 +1,13 @@
+{% comment %}
+One field of a Django form, in the editorial form style.
+
+Include with the bound field in `field`; Django keeps ownership of the widget,
+required state, validation and error messages — this only arranges them.
+
+    {% include "core/partials/form_field.html" with field=form.title %}
+{% endcomment %}<div class="field{% if field.errors %} field--invalid{% endif %}">
+    <label class="field__label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="field__required" title="Required">*</span>{% endif %}</label>
+    {{ field }}
+    {% if field.help_text %}<p class="field__help">{{ field.help_text }}</p>{% endif %}
+    {% if field.errors %}<ul class="field__errors">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+</div>

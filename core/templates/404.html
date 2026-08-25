@@ -3,15 +3,13 @@
 {% block title %}Page not found — LaunchPad{% endblock %}
 
 {% block content %}
-<section class="empty-state">
-    <div>
-        <div class="empty-state__icon" aria-hidden="true">⌁</div>
-        <h1>We couldn't find that page.</h1>
-        <p class="lede">The link may be out of date, or the project may have been made private or removed by its owner.</p>
-        <div class="button-row">
-            <a class="button" href="{% url 'project_list' %}">Explore projects</a>
-            <a class="button button--secondary" href="{% url 'home' %}">Back to home</a>
-        </div>
+<section class="status-page">
+    <p class="status-page__code">404</p>
+    <h1 class="status-page__title">We could not find that page.</h1>
+    <p class="status-page__note">The link may be out of date, or the project may have been made private or removed by its owner.</p>
+    <div class="status-page__actions">
+        <a class="editorial-button" href="{% url 'project_list' %}">Explore projects</a>
+        <a class="editorial-button editorial-button--quiet" href="{% url 'home' %}">Back to home</a>
     </div>
 </section>
 {% endblock %}

@@ -1,0 +1,39 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}LaunchPad{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Space+Grotesk:wght@500;600;700&display=swap">
+    <link rel="stylesheet" href="{% static 'core/css/style.css' %}">
+</head>
+<body class="auth-body">
+<a class="skip-link" href="#auth-main">Skip to main content</a>
+<div class="auth-split">
+    <aside class="auth-aside">
+        <a class="auth-aside__brand" href="{% url 'home' %}">LaunchPad</a>
+        <div class="auth-aside__canvas" aria-hidden="true">
+            <div class="auth-aside__frame"></div>
+            <span class="auth-aside__stamp">Student work // published</span>
+        </div>
+    </aside>
+    <main class="auth-main" id="auth-main" tabindex="-1">
+        <div class="auth-column">
+            <nav class="auth-tabs" aria-label="Account">
+                <a class="auth-tab{% block tab_login %}{% endblock %}" href="{% url 'login' %}">Sign in</a>
+                <a class="auth-tab{% block tab_register %}{% endblock %}" href="{% url 'register' %}">Create account</a>
+            </nav>
+            {% if messages %}
+                <div class="message-stack" role="status" aria-live="polite">
+                    {% for message in messages %}<div class="message message--{{ message.level_tag }}"><span class="message__text">{{ message }}</span></div>{% endfor %}
+                </div>
+            {% endif %}
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+</div>
+</body>
+</html>

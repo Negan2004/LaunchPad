@@ -60,7 +60,7 @@ class EngagementHtmxTests(TestCase):
             reverse("toggle_like", args=[self.project.pk]), **HX
         )
 
-        self.assertContains(response, '<span class="engagement-number">1</span>')
+        self.assertContains(response, '<span class="engagement-button__count">1</span>')
 
     def test_liking_without_htmx_still_redirects(self):
         response = self.client.post(reverse("toggle_like", args=[self.project.pk]))

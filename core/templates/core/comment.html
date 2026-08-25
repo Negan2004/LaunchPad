@@ -1,39 +1,45 @@
-<article class="comment-card card">
-    <div class="comment-card__top">
-        <span class="comment-author">{{ comment.user.username }}</span>
-        <time class="comment-time" datetime="{{ comment.created_at|date:'c' }}">{{ comment.created_at|date:"M d, Y · H:i" }}</time>
-    </div>
-    <div class="comment-body">{{ comment.content }}</div>
+{% load profile_extras %}{% comment %}
+One comment and its replies.
 
-    <div class="comment-actions">
-        {% if user == comment.user %}
-            <a class="button button--quiet" href="{% url 'edit_comment' comment.pk %}">Edit</a>
-        {% endif %}
-
-        {% if user == comment.user or user == project.owner %}
-            <form method="post" action="{% url 'delete_comment' comment.pk %}">
-                {% csrf_token %}
-                <button type="submit" class="button button--quiet">Delete</button>
-            </form>
-        {% endif %}
-    </div>
-
-    {% if user.is_authenticated %}
-        <form class="reply-form" method="post" action="{% url 'add_reply' comment.pk %}">
-            {% csrf_token %}
-            <label class="visually-hidden" for="reply-{{ comment.pk }}">Reply to {{ comment.user.username }}</label>
-            <textarea id="reply-{{ comment.pk }}" name="content" rows="2" placeholder="Reply to {{ comment.user.username }}..." required></textarea>
-            <button type="submit" class="button button--secondary">Reply</button>
-        </form>
-    {% else %}
-        <p class="field-help"><a href="{% url 'login' %}">Log in</a> to reply.</p>
-    {% endif %}
-
-    {% if comment.replies.all %}
-        <div class="comment-replies">
-            {% for reply in comment.replies.all %}
-                {% include "core/comment.html" with comment=reply level=level|add:"40" %}
-            {% endfor %}
+Included by project_detail and by itself for replies, so the reply form, the
+author/owner controls and the recursion all live in one place. Every control is
+a plain form or link: comments do not use htmx.
+{% endcomment %}<article class="comment">
+    {% include "core/partials/avatar.html" with profile_user=comment.user size="lg" %}
+    <div class="comment__body">
+        <p class="comment__head">
+            <a class="comment__author" href="{% url 'public_profile' comment.user.username %}">{{ comment.user.username }}</a>
+            <time class="comment__time" datetime="{{ comment.created_at|date:'c' }}">{{ comment.created_at|timesince|split_commas|first }} ago</time>
+        </p>
+        <div class="comment__text">{{ comment.content|linebreaks }}</div>
+        <div class="comment__actions">
+            {% if user.is_authenticated %}
+                <details class="comment__reply">
+                    <summary>Reply</summary>
+                    <form method="post" action="{% url 'add_reply' comment.pk %}">
+                        {% csrf_token %}
+                        <label class="visually-hidden" for="reply-{{ comment.pk }}">Reply to {{ comment.user.username }}</label>
+                        <textarea id="reply-{{ comment.pk }}" name="content" rows="3" placeholder="Reply to {{ comment.user.username }}..." required></textarea>
+                        <button class="editorial-button editorial-button--quiet" type="submit">Post reply</button>
+                    </form>
+                </details>
+            {% else %}
+                <a href="{% url 'login' %}?next={{ request.path|urlencode }}">Log in to reply</a>
+            {% endif %}
+            {% if user == comment.user %}
+                <a href="{% url 'edit_comment' comment.pk %}">Edit</a>
+            {% endif %}
+            {% if user == comment.user or user == project.owner %}
+                <form method="post" action="{% url 'delete_comment' comment.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="comment__delete">Delete</button>
+                </form>
+            {% endif %}
         </div>
-    {% endif %}
+        {% if comment.replies.all %}
+            <div class="comment__replies">
+                {% for reply in comment.replies.all %}{% include "core/comment.html" with comment=reply %}{% endfor %}
+            </div>
+        {% endif %}
+    </div>
 </article>

@@ -1,0 +1,8 @@
+{% comment %}
+Avatar for a user, falling back to their initial when no image is stored.
+
+Include with the user in `profile_user` and an optional `size` of sm (24px),
+md (32px) or lg (40px):
+
+    {% include "core/partials/avatar.html" with profile_user=comment.user size="lg" %}
+{% endcomment %}{% load profile_extras %}<span class="avatar avatar--{{ size|default:'md' }}">{% if profile_user.profile.avatar|stored_file_exists %}<img src="{{ profile_user.profile.avatar.url }}" alt="" loading="lazy">{% else %}{{ profile_user.username|first|upper }}{% endif %}</span>

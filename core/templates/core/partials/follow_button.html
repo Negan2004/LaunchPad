@@ -4,7 +4,7 @@ Follow / unfollow control for a public profile.
 Rendered inline by public_profile and returned on its own by toggle_follow when
 the request came from htmx. Without JavaScript the form posts normally and the
 view redirects back to the profile, exactly as before.
-{% endcomment %}<div class="profile-actions" id="follow-action">
+{% endcomment %}<div class="follow-action" id="follow-action">
     <form method="post"
           action="{% url 'toggle_follow' profile_user.username %}"
           hx-post="{% url 'toggle_follow' profile_user.username %}"
@@ -13,9 +13,9 @@ view redirects back to the profile, exactly as before.
           hx-disabled-elt="find button">
         {% csrf_token %}
         {% if is_following %}
-            <button type="submit" class="button button--secondary" aria-pressed="true">Following</button>
+            <button type="submit" class="editorial-button editorial-button--quiet" aria-pressed="true">Following</button>
         {% else %}
-            <button type="submit" class="button button--secondary" aria-pressed="false">Follow</button>
+            <button type="submit" class="editorial-button" aria-pressed="false">Follow</button>
         {% endif %}
     </form>
 </div>

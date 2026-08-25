@@ -1,11 +1,15 @@
 import shutil
 import tempfile
+from datetime import timedelta
 from io import BytesIO
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.auth.models import User
+from django.db import connection
 from django.test import TestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
+from django.utils import timezone
 from PIL import Image
 
 from .forms import ProfileForm
@@ -712,3 +716,105 @@ class PlatformFeatureTests(TestCase):
         )
         notification.refresh_from_db()
         self.assertTrue(notification.is_read)
+
+
+class DashboardWorkspaceTests(TestCase):
+    """The dashboard lists the owner's own work, entries and notifications.
+
+    The view gained these three querysets when the workspace UI was built, so
+    the scoping is covered here: a dashboard must never leak another account's
+    projects or notifications into the page.
+    """
+
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="workspace-owner", password="dashboard-pass-1",
+        )
+        self.stranger = User.objects.create_user(
+            username="workspace-stranger", password="dashboard-pass-2",
+        )
+        self.category = Category.objects.create(name="Workspace")
+
+        self.own_project = Project.objects.create(
+            owner=self.owner,
+            category=self.category,
+            title="Own workspace project",
+            description="Belongs to the dashboard owner.",
+            status="published",
+            visibility="public",
+        )
+        self.other_project = Project.objects.create(
+            owner=self.stranger,
+            category=self.category,
+            title="Stranger workspace project",
+            description="Belongs to somebody else.",
+            status="published",
+            visibility="public",
+        )
+
+        Notification.objects.create(
+            recipient=self.owner,
+            sender=self.stranger,
+            notification_type="like",
+            message="A notification addressed to the owner.",
+        )
+        Notification.objects.create(
+            recipient=self.stranger,
+            sender=self.owner,
+            notification_type="like",
+            message="A notification addressed to the stranger.",
+        )
+
+        self.contest = Contest.objects.create(
+            title="Workspace Contest",
+            description="Contest used by the dashboard tests.",
+            rules="Be kind.",
+            registration_deadline=timezone.now() + timedelta(days=5),
+            submission_deadline=timezone.now() + timedelta(days=10),
+            status="active",
+        )
+        ContestParticipant.objects.create(contest=self.contest, user=self.owner)
+
+        self.client.login(username="workspace-owner", password="dashboard-pass-1")
+
+    def test_dashboard_lists_only_the_owners_projects(self):
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertContains(response, "Own workspace project")
+        self.assertNotContains(response, "Stranger workspace project")
+
+    def test_dashboard_lists_only_the_owners_notifications(self):
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertContains(response, "A notification addressed to the owner.")
+        self.assertNotContains(response, "A notification addressed to the stranger.")
+
+    def test_dashboard_lists_the_owners_contest_entries(self):
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertContains(response, "Workspace Contest")
+
+    def test_dashboard_query_count_does_not_grow_with_the_number_of_projects(self):
+        with self.assertNumQueries(self.dashboard_query_count()):
+            self.client.get(reverse("dashboard"))
+
+        for index in range(6):
+            Project.objects.create(
+                owner=self.owner,
+                category=self.category,
+                title=f"Extra project {index}",
+                description="Adds rows to the recent-projects list.",
+                status="published",
+                visibility="public",
+            )
+
+        with self.assertNumQueries(self.dashboard_query_count()):
+            self.client.get(reverse("dashboard"))
+
+    def dashboard_query_count(self):
+        """Queries the dashboard is expected to issue, measured once."""
+        if not hasattr(self, "_dashboard_queries"):
+            with CaptureQueriesContext(connection) as context:
+                self.client.get(reverse("dashboard"))
+            self._dashboard_queries = len(context)
+        return self._dashboard_queries

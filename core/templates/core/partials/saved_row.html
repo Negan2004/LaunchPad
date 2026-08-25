@@ -1,0 +1,32 @@
+{% comment %}
+One saved project, as a row.
+
+Shared by the saved-work shelf and collection detail. `bookmark` is the
+Bookmark; pass `show_collection=True` where the collection label is useful.
+{% endcomment %}<li class="saved-row">
+    {% with thumb=bookmark.project.images.all|first %}
+        <a class="saved-row__thumb{% if not thumb %} saved-row__thumb--empty{% endif %}" href="{% url 'project_detail' bookmark.project.pk %}" tabindex="-1" aria-hidden="true">
+            {% if thumb %}<img src="{{ thumb.image.url }}" alt="" loading="lazy">{% endif %}
+        </a>
+    {% endwith %}
+    <div class="saved-row__text">
+        <p class="saved-row__meta">
+            <span>{{ bookmark.project.category }}</span>
+            <span class="meta-dot" aria-hidden="true">&bull;</span>
+            <span>by {{ bookmark.project.owner.username }}</span>
+            {% if show_collection and bookmark.collection %}
+                <span class="meta-dot" aria-hidden="true">&bull;</span>
+                <span class="saved-row__collection">In {{ bookmark.collection.name }}</span>
+            {% endif %}
+        </p>
+        <h2 class="saved-row__title"><a href="{% url 'project_detail' bookmark.project.pk %}">{{ bookmark.project.title }}</a></h2>
+        <p class="saved-row__note">{% if bookmark.project.short_description %}{{ bookmark.project.short_description }}{% else %}{{ bookmark.project.description|truncatewords:24 }}{% endif %}</p>
+    </div>
+    <div class="saved-row__actions">
+        <a class="editorial-button editorial-button--quiet" href="{% url 'add_bookmark_to_collection' bookmark.pk %}">Organise</a>
+        <form method="post" action="{% url 'toggle_bookmark' bookmark.project.pk %}">
+            {% csrf_token %}
+            <button class="saved-row__remove" type="submit">Remove</button>
+        </form>
+    </div>
+</li>

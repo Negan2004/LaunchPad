@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseNotAllowed, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.db import transaction
-from django.db.models import Q, Count, F, Max, Sum
+from django.db.models import Q, Count, F, Max, Prefetch, Sum
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.contrib.auth.models import User
@@ -132,9 +132,11 @@ def save_project_images(project, image_forms):
 
 
 def home(request):
+    # The front-page cards show a thumbnail, so prefetch images alongside the
+    # owner and category rather than paying a query per card.
     public_projects = Project.objects.filter(
         status="published", visibility="public",
-    ).select_related("owner", "category")
+    ).select_related("owner", "category").prefetch_related("images")
     projects = public_projects.order_by("-created_at")[:6]
     featured_projects = public_projects.filter(featured=True).order_by("-featured_at", "-created_at")[:3]
     trending_projects = public_projects.annotate(like_total=Count("likes")).order_by("-views_count", "-like_total", "-created_at")[:3]
@@ -252,14 +254,16 @@ def project_detail(request, pk):
         visibility="public",
     )
 
+    projects = Project.objects.select_related("owner", "owner__profile", "category")
+
     if request.user.is_authenticated:
         project = get_object_or_404(
-            Project,
+            projects,
             Q(pk=pk) & (public_projects | Q(owner=request.user)),
         )
     else:
         project = get_object_or_404(
-            Project,
+            projects,
             Q(pk=pk) & public_projects,
         )
 
@@ -309,8 +313,11 @@ def project_detail(request, pk):
     comments = Comment.objects.filter(
         project=project,
         parent__isnull=True
-    ).select_related("user").prefetch_related(
-        "replies__user"
+    ).select_related("user", "user__profile").prefetch_related(
+        # Two levels: the template renders replies-to-replies, and without the
+        # second level each reply costs its own query.
+        "replies__user__profile",
+        "replies__replies__user__profile",
     ).order_by("-created_at")
 
     comment_form = CommentForm()
@@ -623,7 +630,8 @@ def my_bookmarks(request):
     bookmarks = Bookmark.objects.filter(
         user=request.user
     ).select_related(
-        "project", "project__owner", "project__category",
+        # The shelf labels which collection a bookmark sits in.
+        "project", "project__owner", "project__category", "collection",
     ).prefetch_related(
         "project__images",
     ).order_by(
@@ -667,8 +675,12 @@ def create_collection(request):
 
 @login_required
 def my_collections(request):
+    # Every row shows how many projects it holds; annotating avoids a count
+    # query per collection.
     collections = BookmarkCollection.objects.filter(
         user=request.user
+    ).annotate(
+        bookmark_total=Count("bookmarks"),
     ).order_by("-created_at")
 
     return render(
@@ -929,6 +941,8 @@ def public_profile(request, username):
         visitor=request.user if request.user.is_authenticated else None,
         session_key=request.session.session_key or "",
     )
+    # like_total is annotated because each work card shows a like count; doing
+    # it here keeps the profile at a constant number of queries.
     projects = Project.objects.filter(
         owner=user,
         status="published",
@@ -937,6 +951,8 @@ def public_profile(request, username):
         "category",
     ).prefetch_related(
         "images",
+    ).annotate(
+        like_total=Count("likes"),
     ).order_by(
         "-created_at",
     )
@@ -1068,7 +1084,9 @@ def following_list(request, username):
 def notifications(request):
     items = Notification.objects.filter(
         recipient=request.user,
-    ).select_related("sender", "project")[:100]
+    ).select_related("sender", "sender__profile", "project").prefetch_related(
+        "project__images",
+    )[:100]
     return render(
         request,
         "core/notifications.html",
@@ -1205,8 +1223,31 @@ def logout_view(request):
 
 
 def contests(request):
-    contest_list = Contest.objects.exclude(status="draft").order_by("registration_deadline")
-    return render(request, "core/contests.html", {"contests": contest_list})
+    # The index shows a participant count on every card and the winner on each
+    # completed contest. Counting and prefetching here keeps the page at a
+    # constant number of queries however many contests are listed.
+    contest_list = Contest.objects.exclude(status="draft").annotate(
+        participant_total=Count("participants", distinct=True),
+        submission_total=Count("submissions", distinct=True),
+    ).prefetch_related(
+        Prefetch(
+            "submissions",
+            queryset=ContestSubmission.objects.filter(
+                status="winner",
+            ).select_related("participant__user"),
+            to_attr="winning_submissions",
+        ),
+    ).order_by("registration_deadline")
+    return render(
+        request,
+        "core/contests.html",
+        {
+            "contests": contest_list,
+            "active_contests": [c for c in contest_list if c.status == "active"],
+            "upcoming_contests": [c for c in contest_list if c.status == "upcoming"],
+            "closed_contests": [c for c in contest_list if c.status in ("completed", "cancelled")],
+        },
+    )
 
 
 def contest_detail(request, pk):
@@ -1214,7 +1255,11 @@ def contest_detail(request, pk):
     participant = None
     if request.user.is_authenticated:
         participant = ContestParticipant.objects.filter(contest=contest, user=request.user).first()
-    submissions = contest.submissions.select_related("participant__user", "project").order_by("-submitted_at")
+    # Each submission card shows the project thumbnail, and winners link to a
+    # certificate, so both come along with the row.
+    submissions = contest.submissions.select_related(
+        "participant__user", "project", "certificate",
+    ).prefetch_related("project__images").order_by("-submitted_at")
     return render(
         request,
         "core/contest_detail.html",
@@ -1584,11 +1629,29 @@ def dashboard(request):
     ]
     completion = round(sum(bool(value) for value in completion_fields) / len(completion_fields) * 100)
     participations = ContestParticipant.objects.filter(user=request.user).count()
+    # The dashboard lists the owner's own work, contest entries and latest
+    # notifications. These are read-only and scoped to request.user exactly like
+    # the counts above; they exist so the template never has to walk relations
+    # itself, which would cost a query per row.
+    recent_projects = request.user.projects.select_related(
+        "category",
+    ).prefetch_related(
+        "images",
+    ).order_by("-updated_at")[:4]
+    contest_entries = ContestParticipant.objects.filter(
+        user=request.user,
+    ).select_related("contest").order_by("-contest__submission_deadline")[:3]
+    recent_notifications = Notification.objects.filter(
+        recipient=request.user,
+    ).select_related("sender", "project").order_by("-created_at")[:4]
     return render(
         request,
         "core/dashboard.html",
         {
             "profile": profile,
+            "recent_projects": recent_projects,
+            "contest_entries": contest_entries,
+            "recent_notifications": recent_notifications,
             "project_count": project_count,
             "published_count": published_count,
             "followers_count": followers_count,

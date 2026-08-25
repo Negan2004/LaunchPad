@@ -1,3 +1,18 @@
 {% extends "core/base.html" %}
 {% block title %}Certificate {{ certificate.certificate_number }} — LaunchPad{% endblock %}
-{% block content %}<section class="certificate-card panel"><p class="eyebrow">LaunchPad recognition</p><h1>Certificate of achievement</h1><p>This certifies that <strong>{{ certificate.submission.participant.user.username }}</strong> received recognition for <strong>{{ certificate.submission.submission_title }}</strong> in <strong>{{ certificate.submission.contest.title }}</strong>.</p><span class="certificate-number">{{ certificate.certificate_number }}</span><p class="muted">Issued {{ certificate.issued_at|date:"M j, Y" }}</p></section>{% endblock %}
+{% block content %}
+<article class="certificate">
+    <p class="certificate__eyebrow">LaunchPad recognition</p>
+    <h1 class="certificate__title">Certificate of achievement</h1>
+    <p class="certificate__body">
+        This certifies that <strong>{{ certificate.submission.participant.user.username }}</strong>
+        received recognition for <strong>{{ certificate.submission.submission_title }}</strong>
+        in <strong>{{ certificate.submission.contest.title }}</strong>.
+    </p>
+    <dl class="certificate__facts">
+        <div><dt>Certificate</dt><dd>{{ certificate.certificate_number }}</dd></div>
+        <div><dt>Issued</dt><dd>{{ certificate.issued_at|date:"M j, Y" }}</dd></div>
+        <div><dt>Contest</dt><dd><a href="{% url 'contest_detail' certificate.submission.contest.pk %}">{{ certificate.submission.contest.title }}</a></dd></div>
+    </dl>
+</article>
+{% endblock %}

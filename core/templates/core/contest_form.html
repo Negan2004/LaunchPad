@@ -1,3 +1,21 @@
 {% extends "core/base.html" %}
 {% block title %}{% if edit_mode %}Edit contest{% else %}Create contest{% endif %} — LaunchPad{% endblock %}
-{% block content %}<header class="page-intro"><div class="page-intro__copy"><p class="eyebrow">Staff workspace</p><h1>{% if edit_mode %}Refine the challenge.{% else %}Create a new challenge.{% endif %}</h1><p class="lede">Give students a clear brief, fair rules, and enough time to do meaningful work.</p></div></header><form class="panel form-card form-layout" method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Save contest</button></form>{% endblock %}
+{% block content %}
+<div class="form-shell">
+    <header class="form-shell__head">
+        <p class="page-head__eyebrow">Staff workspace</p>
+        <h1 class="page-head__title">{% if edit_mode %}Refine the challenge.{% else %}Create a new challenge.{% endif %}</h1>
+        <p class="page-head__lede">Give students a clear brief, fair rules, and enough time to do meaningful work.</p>
+    </header>
+
+    <form class="form-body" method="post">
+        {% csrf_token %}
+        {% include "core/partials/form_errors.html" %}
+        {% for field in form %}{% include "core/partials/form_field.html" %}{% endfor %}
+        <div class="form-body__actions">
+            <button class="editorial-button" type="submit">Save contest</button>
+            <a class="editorial-button editorial-button--quiet" href="{% url 'manage_contests' %}">Back to contests</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

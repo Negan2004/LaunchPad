@@ -1,8 +1,46 @@
 {% comment %}
-Like / bookmark panel for a project.
+Like / bookmark controls for a project.
 
 Rendered inline by project_detail and returned on its own by toggle_like and
 toggle_bookmark when the request came from htmx, which swaps this whole element
 in place. The forms keep their method/action, so with JavaScript unavailable
 they submit normally and the view redirects as before.
-{% endcomment %}<div class="engagement-card card" id="engagement-card"><span class="engagement-number">{{ like_count }}</span><div class="engagement-label">Signals of appreciation</div><div class="engagement-metrics"><span>{{ view_count }} views</span><span>{{ comment_count }} comments</span></div><div class="stacked-actions">{% if user.is_authenticated %}<form method="post" action="{% url 'toggle_like' project.pk %}" hx-post="{% url 'toggle_like' project.pk %}" hx-target="#engagement-card" hx-swap="outerHTML" hx-disabled-elt="find button">{% csrf_token %}<button type="submit" class="{% if user_has_liked %}button--secondary{% endif %}" aria-pressed="{% if user_has_liked %}true{% else %}false{% endif %}">{% if user_has_liked %}Unlike project{% else %}Appreciate project{% endif %}</button></form><form method="post" action="{% url 'toggle_bookmark' project.pk %}" hx-post="{% url 'toggle_bookmark' project.pk %}" hx-target="#engagement-card" hx-swap="outerHTML" hx-disabled-elt="find button">{% csrf_token %}<button type="submit" class="{% if user_has_bookmarked %}button--secondary{% endif %}" aria-pressed="{% if user_has_bookmarked %}true{% else %}false{% endif %}">{% if user_has_bookmarked %}Remove from saved{% else %}Save for later{% endif %}</button></form>{% else %}<a class="button" href="{% url 'login' %}?next={{ request.path|urlencode }}">Log in to engage</a>{% endif %}</div></div>
+{% endcomment %}<div class="engagement-row" id="engagement-card">
+    {% if user.is_authenticated %}
+        <form method="post"
+              action="{% url 'toggle_like' project.pk %}"
+              hx-post="{% url 'toggle_like' project.pk %}"
+              hx-target="#engagement-card"
+              hx-swap="outerHTML"
+              hx-disabled-elt="find button">
+            {% csrf_token %}
+            <button type="submit"
+                    class="engagement-button{% if user_has_liked %} engagement-button--on{% endif %}"
+                    aria-pressed="{% if user_has_liked %}true{% else %}false{% endif %}"
+                    aria-label="{% if user_has_liked %}Unlike project{% else %}Appreciate project{% endif %}">
+                <svg width="15" height="14" viewBox="0 0 15 14" fill="none" aria-hidden="true" focusable="false"><path d="M7.5 13.1 1.9 7.6A3.6 3.6 0 0 1 7.5 3.1a3.6 3.6 0 0 1 5.6 4.5L7.5 13.1Z" stroke="currentColor" stroke-width="1.3" fill="{% if user_has_liked %}currentColor{% else %}none{% endif %}"/></svg>
+                <span>{% if user_has_liked %}Liked{% else %}Like{% endif %}</span>
+                <span class="engagement-button__count">{{ like_count }}</span>
+            </button>
+        </form>
+        <form method="post"
+              action="{% url 'toggle_bookmark' project.pk %}"
+              hx-post="{% url 'toggle_bookmark' project.pk %}"
+              hx-target="#engagement-card"
+              hx-swap="outerHTML"
+              hx-disabled-elt="find button">
+            {% csrf_token %}
+            <button type="submit"
+                    class="engagement-button{% if user_has_bookmarked %} engagement-button--on{% endif %}"
+                    aria-pressed="{% if user_has_bookmarked %}true{% else %}false{% endif %}"
+                    aria-label="{% if user_has_bookmarked %}Remove from saved{% else %}Save for later{% endif %}">
+                <svg width="10.5" height="13.5" viewBox="0 0 8.16667 10.5" fill="none" aria-hidden="true" focusable="false"><path d="M0 10.5V1.16667C0 0.845833 0.114236 0.571181 0.342708 0.342708C0.571181 0.114236 0.845833 0 1.16667 0H7C7.32083 0 7.59549 0.114236 7.82396 0.342708C8.05243 0.571181 8.16667 0.845833 8.16667 1.16667V10.5L4.08333 8.75L0 10.5V10.5M1.16667 8.72083L4.08333 7.46667L7 8.72083V1.16667V1.16667V1.16667H1.16667V1.16667V1.16667V8.72083V8.72083M1.16667 1.16667V1.16667V1.16667V1.16667H7V1.16667V1.16667V1.16667H4.08333H1.16667V1.16667" fill="currentColor"/></svg>
+                <span>{% if user_has_bookmarked %}Saved{% else %}Save{% endif %}</span>
+            </button>
+        </form>
+    {% else %}
+        <a class="engagement-button" href="{% url 'login' %}?next={{ request.path|urlencode }}" aria-label="Log in to engage">Log in to engage</a>
+    {% endif %}
+    <span class="engagement-stat">{{ view_count }} views</span>
+    <span class="engagement-stat">{{ comment_count }} comments</span>
+</div>

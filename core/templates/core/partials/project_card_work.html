@@ -1,0 +1,28 @@
+{% comment %}
+Project card for a profile's body of work.
+
+Two sizes from one template: pass `lead=True` for the eight-column opener,
+otherwise it renders the four-column variant. Reads the annotated `like_total`
+and the stored `views_count`, so the row of stats costs no extra queries.
+
+    {% include "core/partials/project_card_work.html" with project=project lead=True %}
+{% endcomment %}{% load profile_extras %}<article class="work-card{% if lead %} work-card--lead{% endif %}">
+    {% include "core/partials/project_card_media.html" with media_modifier="article-card__media--work" %}
+    <div class="work-card__foot">
+        <div class="work-card__text">
+            <h3 class="work-card__title"><a href="{% url 'project_detail' project.pk %}">{{ project.title }}</a></h3>
+            {% if project.technologies %}
+                <ul class="chip-row">
+                    {% for technology in project.technologies|split_commas|slice:":3" %}<li class="chip chip--plain">{{ technology }}</li>{% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+        <div class="work-card__stats">
+            <span class="work-card__date">Published {{ project.created_at|date:"M j, Y" }}</span>
+            <span class="work-card__counts">
+                <span title="Likes">{{ project.like_total|default:0 }} likes</span>
+                <span title="Views">{{ project.views_count }} views</span>
+            </span>
+        </div>
+    </div>
+</article>
