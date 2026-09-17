@@ -7,8 +7,8 @@
         <div class="workspace__identity">
             {% include "core/partials/avatar.html" with profile_user=user size="lg" %}
             <span class="workspace__identity-text">
-                <span class="workspace__title">Developer dashboard</span>
-                <span class="workspace__subtitle">Manage your work</span>
+                <span class="workspace__title">Project operations</span>
+                <span class="workspace__subtitle">Build. Track. Verify. Showcase.</span>
             </span>
         </div>
         <a class="editorial-button workspace__cta" href="{% url 'create_project' %}">New project</a>
@@ -30,13 +30,13 @@
     <div class="workspace__body">
         <div class="workspace__main">
             <header class="workspace__header">
-                <h1 class="workspace__heading">Activity log</h1>
-                <p class="workspace__lede">Latest updates from your creative workspace.</p>
+                <h1 class="workspace__heading">Your project command center</h1>
+                <p class="workspace__lede">See what needs attention across your Project Records.</p>
             </header>
 
             <section class="workspace__section">
                 <div class="rule-head">
-                    <h2 class="rule-head__title">Recent projects</h2>
+                    <h2 class="rule-head__title">Active Project Records</h2>
                     <a class="rule-head__link" href="{% url 'public_profile' user.username %}">View all</a>
                 </div>
                 {% if recent_projects %}
@@ -44,11 +44,11 @@
                         {% for project in recent_projects %}
                             <li class="record">
                                 <div class="record__text">
-                                    <h3 class="record__title"><a href="{% url 'project_detail' project.pk %}">{{ project.title }}</a></h3>
+                                    <h3 class="record__title"><a href="{% url 'project_workspace' project.pk %}">{{ project.title }}</a></h3>
                                     <p class="record__note">{% if project.short_description %}{{ project.short_description }}{% else %}{{ project.description|truncatewords:20 }}{% endif %}</p>
                                 </div>
                                 <dl class="record__meta">
-                                    <div><dt>Status</dt><dd class="record__status">{{ project.get_status_display }}</dd></div>
+                                    <div><dt>Lifecycle</dt><dd class="record__status">{{ project.get_lifecycle_state_display }}</dd></div>
                                     <div><dt>Visibility</dt><dd>{{ project.get_visibility_display }}</dd></div>
                                     <div><dt>Updated</dt><dd>{{ project.updated_at|timesince|split_commas|first }} ago</dd></div>
                                     <div><dt>Views</dt><dd>{{ project.views_count }}</dd></div>

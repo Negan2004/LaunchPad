@@ -13,6 +13,7 @@ from .models import (
     Contest,
     ContestSubmission,
     Report,
+    College, Department, Program, AcademicYear, Semester,
 )
 
 
@@ -90,6 +91,11 @@ class ProjectForm(forms.ModelForm):
         model = Project
         fields = [
             "title",
+            "tagline",
+            "problem_statement",
+            "proposed_solution",
+            "project_type",
+            "skills",
             "short_description",
             "description",
             "category",
@@ -102,6 +108,11 @@ class ProjectForm(forms.ModelForm):
             "visibility",
             "status",
             "stage",
+            "college_entity",
+            "department_entity",
+            "program_entity",
+            "academic_year_entity",
+            "semester_entity",
         ]
         widgets = {
             "short_description": forms.TextInput(attrs={"maxlength": 280}),

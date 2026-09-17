@@ -11,3 +11,5 @@ media/**/seed_*
 
 # collectstatic output (build artifact, not source)
 staticfiles/
+venv311/
+media/avatars/wp2509448-negan-wallpapers.jpg

@@ -49,6 +49,9 @@ from .models import (
     ProfileVisit,
     ActivityEvent,
     Report,
+    College, Department, Program, AcademicYear, Semester, ProjectMember,
+    ProjectMentorship, ProjectMilestone, ProjectLifecycleEvent, ProjectVerification,
+    ProjectReview, ProjectApproval, ProjectDocument,
 )
 
 
@@ -1693,6 +1696,173 @@ def analytics(request):
         },
     )
 
+
+
+LIFECYCLE_ORDER = [
+    "idea", "team_formation", "awaiting_mentor", "proposal", "awaiting_approval",
+    "approved", "planning", "development", "milestones", "under_review",
+    "revision_required", "submitted", "evaluated", "verified", "showcase",
+    "completed", "archived",
+]
+
+
+def can_manage_project_record(user, project):
+    if not user.is_authenticated:
+        return False
+    if project.owner_id == user.id or project.members.filter(user=user).exists():
+        return True
+    profile = getattr(user, "profile", None)
+    return bool(profile and profile.role in {"faculty", "mentor", "department_admin", "college_admin", "platform_admin"}
+                and (profile.college_entity_id is None or profile.college_entity_id == project.college_entity_id))
+
+
+@login_required
+def project_workspace(request, pk):
+    project = get_object_or_404(
+        Project.objects.select_related("owner", "category", "college_entity", "department_entity", "program_entity", "academic_year_entity", "semester_entity"),
+        pk=pk,
+    )
+    if not get_accessible_project(request, pk) or not can_manage_project_record(request.user, project):
+        return HttpResponseForbidden("You do not have access to this project record.")
+    return render(request, "core/project_workspace.html", {
+        "project": project,
+        "lifecycle_choices": Project.LIFECYCLE_CHOICES,
+        "members": project.members.select_related("user", "user__profile"),
+        "mentorships": project.mentorships.select_related("mentor", "requested_by"),
+        "milestones": project.milestones.select_related("owner").order_by("deadline", "id"),
+        "approvals": project.approvals.select_related("reviewer").order_by("-submitted_at"),
+        "reviews": project.reviews.select_related("reviewer").order_by("-created_at"),
+        "verifications": project.verifications.select_related("verifier").order_by("scope"),
+        "lifecycle_events": project.lifecycle_events.select_related("actor"),
+    })
+
+
+@login_required
+def transition_project(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    if not can_manage_project_record(request.user, project):
+        return HttpResponseForbidden("You do not have permission to change this project record.")
+    new_state = request.POST.get("new_state", "").strip()
+    if new_state not in dict(Project.LIFECYCLE_CHOICES):
+        messages.error(request, "Choose a valid lifecycle state.")
+        return redirect("project_workspace", pk=project.pk)
+    if new_state == project.lifecycle_state:
+        messages.info(request, "The project is already in that lifecycle state.")
+        return redirect("project_workspace", pk=project.pk)
+    old_state = project.lifecycle_state
+    ProjectLifecycleEvent.objects.create(
+        project=project, previous_state=old_state, new_state=new_state,
+        actor=request.user, reason=request.POST.get("reason", "").strip(),
+    )
+    project.lifecycle_state = new_state
+    project.is_archived = new_state == "archived"
+    if new_state in {"showcase", "completed"}:
+        project.status = "published"
+        project.visibility = "public"
+    project.save(update_fields=["lifecycle_state", "is_archived", "status", "visibility", "updated_at"])
+    messages.success(request, f"Project moved to {project.get_lifecycle_state_display()}.")
+    return redirect("project_workspace", pk=project.pk)
+
+
+@login_required
+def respond_to_mentor_request(request, pk):
+    mentorship = get_object_or_404(ProjectMentorship.objects.select_related("project"), pk=pk, mentor=request.user)
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    action = request.POST.get("action")
+    if action not in {"accepted", "rejected"}:
+        messages.error(request, "Choose accept or reject.")
+    else:
+        mentorship.status = action
+        mentorship.feedback = request.POST.get("feedback", "").strip()
+        mentorship.responded_at = timezone.now()
+        mentorship.save(update_fields=["status", "feedback", "responded_at"])
+        create_notification(recipient=mentorship.requested_by, sender=request.user, project=mentorship.project, notification_type="mentor_response", message=f"Your mentor request for {mentorship.project.title} was {action}.")
+        messages.success(request, f"Mentor request {action}.")
+    return redirect("project_workspace", pk=mentorship.project_id)
+
+
+@login_required
+def review_project_approval(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+    profile = getattr(request.user, "profile", None)
+    if not profile or profile.role not in {"faculty", "department_admin", "college_admin", "platform_admin"}:
+        return HttpResponseForbidden("Only authorized faculty or administrators can review proposals.")
+    if project.college_entity_id and profile.college_entity_id and project.college_entity_id != profile.college_entity_id:
+        return HttpResponseForbidden("This project belongs to another college.")
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    status = request.POST.get("status")
+    if status not in {"approved", "rejected", "revision"}:
+        messages.error(request, "Choose a valid review decision.")
+    else:
+        ProjectApproval.objects.create(project=project, reviewer=request.user, status=status, comments=request.POST.get("comments", "").strip(), reviewed_at=timezone.now())
+        target = {"approved": "approved", "rejected": "revision_required", "revision": "revision_required"}[status]
+        ProjectLifecycleEvent.objects.create(project=project, previous_state=project.lifecycle_state, new_state=target, actor=request.user, reason=request.POST.get("comments", "").strip())
+        project.lifecycle_state = target
+        project.save(update_fields=["lifecycle_state", "updated_at"])
+        create_notification(recipient=project.owner, sender=request.user, project=project, notification_type="proposal_review", message=f"Your proposal was marked {status}.")
+        messages.success(request, "Proposal review recorded.")
+    return redirect("project_workspace", pk=project.pk)
+
+
+@login_required
+def verify_project_record(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+    profile = getattr(request.user, "profile", None)
+    if not profile or profile.role not in {"mentor", "faculty", "department_admin", "college_admin", "platform_admin"}:
+        return HttpResponseForbidden("Only authorized institutional reviewers can verify projects.")
+    if project.college_entity_id and profile.college_entity_id and project.college_entity_id != profile.college_entity_id:
+        return HttpResponseForbidden("This project belongs to another college.")
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    scope = request.POST.get("scope")
+    allowed_scopes = {"mentor", "faculty", "department", "institution"}
+    if scope not in allowed_scopes:
+        messages.error(request, "Choose a valid verification scope.")
+    else:
+        ProjectVerification.objects.update_or_create(project=project, scope=scope, defaults={"verifier": request.user, "status": "verified", "evidence": request.POST.get("evidence", "").strip(), "comments": request.POST.get("comments", "").strip(), "verified_at": timezone.now()})
+        if not project.verifications.exclude(scope=scope).filter(status="verified").exists() and project.lifecycle_state not in {"showcase", "completed", "archived"}:
+            ProjectLifecycleEvent.objects.create(project=project, previous_state=project.lifecycle_state, new_state="verified", actor=request.user, reason=f"{scope} verification recorded")
+            project.lifecycle_state = "verified"
+            project.save(update_fields=["lifecycle_state", "updated_at"])
+        create_notification(recipient=project.owner, sender=request.user, project=project, notification_type="verification", message=f"Your project received {scope} verification.")
+        messages.success(request, "Verification recorded in the project history.")
+    return redirect("project_workspace", pk=project.pk)
+
+
+@login_required
+def add_project_milestone(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    if not can_manage_project_record(request.user, project):
+        return HttpResponseForbidden("You do not have permission to manage this project.")
+    title = request.POST.get("title", "").strip()
+    if not title:
+        messages.error(request, "A milestone title is required.")
+    else:
+        ProjectMilestone.objects.create(project=project, title=title, description=request.POST.get("description", "").strip(), owner=request.user, deadline=request.POST.get("deadline") or None)
+        messages.success(request, "Milestone added to the project record.")
+    return redirect("project_workspace", pk=project.pk)
+
+
+@login_required
+def request_project_mentor(request, pk):
+    project = get_object_or_404(Project, pk=pk, owner=request.user)
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    mentor_id = request.POST.get("mentor_id")
+    mentor = get_object_or_404(User, pk=mentor_id)
+    if mentor == request.user:
+        messages.error(request, "You cannot request yourself as a mentor.")
+    else:
+        ProjectMentorship.objects.update_or_create(project=project, mentor=mentor, defaults={"requested_by": request.user, "status": "requested"})
+        create_notification(recipient=mentor, sender=request.user, project=project, notification_type="mentor_request", message=f"{request.user.username} requested mentorship for {project.title}.")
+        messages.success(request, "Mentor request sent.")
+    return redirect("project_workspace", pk=project.pk)
 
 def public_stats(request):
     return {

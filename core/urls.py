@@ -190,6 +190,13 @@ path(
     path("projects/<int:pk>/report/", views.report_project, name="report_project"),
     path("dashboard/", views.dashboard, name="dashboard"),
     path("analytics/", views.analytics, name="analytics"),
+    path("projects/<int:pk>/workspace/", views.project_workspace, name="project_workspace"),
+    path("projects/<int:pk>/transition/", views.transition_project, name="transition_project"),
+    path("projects/<int:pk>/milestones/add/", views.add_project_milestone, name="add_project_milestone"),
+    path("projects/<int:pk>/mentor-request/", views.request_project_mentor, name="request_project_mentor"),
+    path("mentorship/<int:pk>/respond/", views.respond_to_mentor_request, name="respond_to_mentor_request"),
+    path("projects/<int:pk>/approval/", views.review_project_approval, name="review_project_approval"),
+    path("projects/<int:pk>/verify/", views.verify_project_record, name="verify_project_record"),
     path("leaderboard/", views.leaderboard, name="leaderboard"),
 
 

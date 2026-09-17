@@ -4,6 +4,9 @@ from .models import (
     BookmarkCollection, Bookmark, Notification, Contest, ContestParticipant,
     ContestSubmission, Certificate, Badge, UserBadge, Achievement, Leaderboard,
     ProjectView, ProfileVisit, ActivityEvent, Report,
+    College, Department, Program, AcademicYear, Semester, ProjectMember,
+    ProjectMentorship, ProjectMilestone, ProjectLifecycleEvent, ProjectVerification,
+    ProjectReview, ProjectApproval, ProjectDocument,
 )
 
 
@@ -60,6 +63,9 @@ class NotificationAdmin(admin.ModelAdmin):
 
 
 for model in [
+    College, Department, Program, AcademicYear, Semester, ProjectMember,
+    ProjectMentorship, ProjectMilestone, ProjectLifecycleEvent, ProjectVerification,
+    ProjectReview, ProjectApproval, ProjectDocument,
     Profile, ProjectImage, Like, Comment, Follow, BookmarkCollection,
     Bookmark, ContestParticipant, ContestSubmission, Certificate, Badge,
     UserBadge, Achievement, Leaderboard, ProjectView, ProfileVisit, ActivityEvent,

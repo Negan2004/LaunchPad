@@ -132,16 +132,20 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # usual local database. The password has no default on purpose: it must come
 # from the environment.
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'launchpad_final_test'),
-        'USER': os.environ.get('DB_USER', 'postgres'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
+DB_ENGINE = os.environ.get('DJANGO_DB_ENGINE', 'django.db.backends.postgresql')
+if DB_ENGINE == 'django.db.backends.sqlite3':
+    DATABASES = {'default': {'ENGINE': DB_ENGINE, 'NAME': os.environ.get('DJANGO_DB_NAME', BASE_DIR / 'db.sqlite3')}}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': DB_ENGINE,
+            'NAME': os.environ.get('DB_NAME', 'launchpad_final_test'),
+            'USER': os.environ.get('DB_USER', 'postgres'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+            'HOST': os.environ.get('DB_HOST', 'localhost'),
+            'PORT': os.environ.get('DB_PORT', '5432'),
+        }
     }
-}
 
 
 # ---------------------------------------------------------------------------
